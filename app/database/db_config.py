@@ -4,6 +4,9 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Fetch variables
 USER = os.getenv("DB_USER")
 PASSWORD = os.getenv("DB_PASSWORD")
