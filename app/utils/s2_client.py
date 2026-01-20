@@ -24,6 +24,7 @@ class S2Client:
         response = self.client.get("graph/v1/paper/search/", params=params)
         response.raise_for_status()
         return response.json().get("data", [])
+    
 
     def get_s2_recommendations(self, limit: int = 10):
         pass
