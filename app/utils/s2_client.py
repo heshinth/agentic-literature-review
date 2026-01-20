@@ -1,9 +1,5 @@
 import httpx
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
 
 class S2Client:
     def __init__(self, api_key: str = None):
@@ -27,8 +23,9 @@ class S2Client:
         response = self.client.get("graph/v1/paper/search/", params=params)
         response.raise_for_status()
         return response.json().get("data", [])
-    
-    def get_s2_recommendations(self, limit:int = 10):
+
+    def get_s2_recommendations(self, limit: int = 10):
         pass
+
 
 client = S2Client()
