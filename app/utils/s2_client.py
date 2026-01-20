@@ -23,8 +23,24 @@ class S2Client:
         }
         response = self.client.get("graph/v1/paper/search/", params=params)
         response.raise_for_status()
-        return response.json().get("data", [])
-    
+        data =  response.json().get("data", [])
+
+        formatted_data = []
+        for item in data:
+            formatted_item = {
+                "paper_id": item.get("paperId"),
+                "doi_id": item.get("externalIds", {}).get("DOI"),
+                "arxiv_id": item.get("externalIds", {}).get("ArXiv"),
+                "title": item.get("title"),
+                "abstract": item.get("abstract"),
+                "authors": ", ".join([author.get("name") for author in item.get("authors", [])]),
+                "year": item.get("year"),
+                "url": item.get("url"),
+                "open_access_url": item.get("openAccessPdf", {}).get("url"),
+                "journal": item.get("journal", {}).get("name"),
+            }
+            formatted_data.append(formatted_item)
+        return formatted_data   
 
     def get_s2_recommendations(self, limit: int = 10):
         pass
