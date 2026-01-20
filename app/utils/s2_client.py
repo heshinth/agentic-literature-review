@@ -11,14 +11,15 @@ class S2Client:
         self.client = httpx.Client(
             base_url="https://api.semanticscholar.org/",
             headers={"x-api-key": self.api_key},
-            timeout=1.1,
+            timeout=30.0,
         )
 
     def s2_search_api(self, query: str, max_results: int = 10) -> dict:
         params = {
             "query": query,
             "limit": max_results,
-            "fields": "title,abstract,authors,year,paperId,externalIds,url,openAccessPdf",
+            "openAccessPdf": True,
+            "fields": "title,abstract,authors,year,paperId,externalIds,url,isOpenAccess,openAccessPdf,journal",
         }
         response = self.client.get("graph/v1/paper/search/", params=params)
         response.raise_for_status()

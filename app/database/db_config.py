@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 from sqlalchemy.engine import URL
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import os
 
 # Fetch variables
@@ -24,9 +25,16 @@ DATABASE_URL = URL.create(
 # Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
+SessionLocal = sessionmaker(bind=engine)
+
+class Base(DeclarativeBase):
+    pass
+
+
 # Test the connection
 try:
     with engine.connect() as connection:
         print("Connection successful!")
 except Exception as e:
     print(f"Failed to connect: {e}")
+    
