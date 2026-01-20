@@ -1,11 +1,4 @@
-from dotenv import load_dotenv
+from utils.s2_client import client
+from rich import print
 
-load_dotenv()
-
-
-def main():
-    print("Hello from agentic-literature-review!")
-
-
-if __name__ == "__main__":
-    main()
+print(client.s2_search_api(query="machine learning", max_results=1))
