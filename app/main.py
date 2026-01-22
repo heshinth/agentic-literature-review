@@ -7,7 +7,7 @@ from database.db_config import SessionLocal
 create_tables()
 
 
-search_query = "machine learning in 2026"
+search_query = input("Enter your search query: ")
 result = client.s2_search_api(query=search_query, max_results=3)
 
 with SessionLocal() as db:
