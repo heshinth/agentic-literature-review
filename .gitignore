@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#Project Specific ignores
+temp_pdfs/
+
 # Distribution / packaging
 .Python
 build/
