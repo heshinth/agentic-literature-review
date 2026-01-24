@@ -8,6 +8,8 @@ __pycache__/
 
 #Project Specific ignores
 temp_pdfs/
+logs/
+*.log
 
 # Distribution / packaging
 .Python

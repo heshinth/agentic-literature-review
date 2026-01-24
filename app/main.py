@@ -1,8 +1,11 @@
 from utils.s2_client import client
-from rich import print
 from database.create_tables import create_tables
 from database.crud import add_paper
 from database.db_config import SessionLocal
+
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 
 create_tables()
 
@@ -14,6 +17,6 @@ with SessionLocal() as db:
     for paper_data in result:
         paper = add_paper(db, paper_data)
         if paper:
-            print(f"Added paper: [bold]{paper.title}[/bold] ({paper.year})")
+            logger.info(f"Added paper: {paper.title} ({paper.year})")
         else:
-            print(f"Skipped existing paper: [dim]{paper_data.get('title')}[/dim]")
+            logger.info(f"Skipped existing paper:{paper_data.get('title')}")

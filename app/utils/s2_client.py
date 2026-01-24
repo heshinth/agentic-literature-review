@@ -1,11 +1,15 @@
 import httpx
 import os
 
+from logging_config import get_logger
+
+logger = get_logger(__name__)
 class S2Client:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("S2_API_KEY")
 
         if not self.api_key:
+            logger.error("S2_API_KEY not set")
             raise ValueError("S2_API_KEY not set")
 
         self.client = httpx.Client(
@@ -22,6 +26,8 @@ class S2Client:
             "fields": "title,abstract,authors,year,paperId,externalIds,url,isOpenAccess,openAccessPdf,journal",
         }
         response = self.client.get("graph/v1/paper/search/", params=params)
+        logger.debug(f"Request URL: {response.url}")
+        logger.info(f"S2 Search API response status: {response.status_code}")
         response.raise_for_status()
         data =  response.json().get("data", [])
 
