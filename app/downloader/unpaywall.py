@@ -12,9 +12,10 @@ def get_oa_status(doi: str) -> dict:
 
     response = response.json()
     oa_locations = response.get("oa_locations", [])
-    return oa_locations
+    oa_locations_url = [loc.get("url_for_pdf") for loc in oa_locations]
+    return oa_locations_url
 
 if __name__ == "__main__":
-    sample_doi = "10.3390/instruments6030028"
+    sample_doi = "10.1186/s13643-024-02575-4"
     oa_info = get_oa_status(sample_doi)
     print(oa_info)

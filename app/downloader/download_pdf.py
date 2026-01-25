@@ -1,5 +1,5 @@
 import os
-from curl_cffi import AsyncSession
+from curl_cffi import AsyncSession , CurlError
 from rich.progress import (
     Progress,
     BarColumn,
@@ -17,44 +17,40 @@ async def download_pdf_from_url(
         return
 
     save_path = f"temp_pdfs/{filename}"
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-    headers = {
-        "Referer": "https://google.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    }
+        headers = {
+            "Referer": "https://google.com",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
 
-    response = await session.get(
-        pdf_url, headers=headers, impersonate="chrome", stream=True, timeout=300
-    )
-    response.raise_for_status()
+        response = await session.get(
+            pdf_url, headers=headers, impersonate="chrome", stream=True, timeout=300
+        )
+        response.raise_for_status()
 
-    total_size = int(response.headers.get("Content-Length", 0))
+        total_size = int(response.headers.get("Content-Length", 0))
 
-    # Rich progress bar setup
-    progress = Progress(
-        TextColumn("[bold blue]{task.description}"),
-        BarColumn(),
-        DownloadColumn(),  # Shows downloaded / total bytes
-        TransferSpeedColumn(),  # Shows speed
-        TimeRemainingColumn(),  # Shows ETA
-    )
+        # Rich progress bar setup
+        progress = Progress(
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(),
+            DownloadColumn(),  # Shows downloaded / total bytes
+            TransferSpeedColumn(),  # Shows speed
+            TimeRemainingColumn(),  # Shows ETA
+        )
 
-    with progress:
-        task = progress.add_task(f"Downloading {filename}", total=total_size)
-        with open(save_path, "wb") as pdf_file:
-            async for chunk in response.aiter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    pdf_file.write(chunk)
-                    progress.update(task, advance=len(chunk))
+        with progress:
+            task = progress.add_task(f"Downloading {filename}", total=total_size)
+            with open(save_path, "wb") as pdf_file:
+                async for chunk in response.aiter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        pdf_file.write(chunk)
+                        progress.update(task, advance=len(chunk))
 
-    print(f"Saved to {save_path}")
-
-
-"""if __name__ == "__main__":
-    sample_pdf_url = (
-        "https://systematicreviewsjournal.biomedcentral.com/counter/pdf/10.1186/s13643-024-02575-4"
-    )
-    async with AsyncSession() as session:
-        await download_pdf_from_url(session, sample_pdf_url)
-"""
+        print(f"Saved to {save_path}")
+    except CurlError as ce:
+        print(f"Curl error for file {filename} ({ce.code}): {ce}")
+    except Exception as e:
+        print(f"Failed to download {pdf_url}: {e}")
