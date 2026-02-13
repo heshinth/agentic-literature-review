@@ -13,6 +13,7 @@ dependencies = [
     "litellm>=1.81.10",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.1",
+    "ratelimit>=2.2.1",
     "rich>=14.2.0",
     "sqlalchemy>=2.0.45",
 ]

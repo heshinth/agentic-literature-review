@@ -1,5 +1,6 @@
 import httpx
 import os
+from ratelimit import limits, sleep_and_retry
 
 from logging_config import get_logger
 
@@ -18,6 +19,8 @@ class S2Client:
             timeout=30.0,
         )
 
+    @sleep_and_retry
+    @limits(calls=1, period=1)
     def s2_search_api(self, query: str, max_results: int = 10) -> dict:
         params = {
             "query": query,
@@ -29,7 +32,7 @@ class S2Client:
         logger.debug(f"Request URL: {response.url}")
         logger.info(f"S2 Search API response status: {response.status_code}")
         response.raise_for_status()
-        data =  response.json().get("data", [])
+        data = response.json().get("data", [])
 
         formatted_data = []
         for item in data:
@@ -39,14 +42,16 @@ class S2Client:
                 "arxiv_id": item.get("externalIds", {}).get("ArXiv"),
                 "title": item.get("title"),
                 "abstract": item.get("abstract"),
-                "authors": ", ".join([author.get("name") for author in item.get("authors", [])]),
+                "authors": ", ".join(
+                    [author.get("name") for author in item.get("authors", [])]
+                ),
                 "year": item.get("year"),
                 "url": item.get("url"),
                 "open_access_url": item.get("openAccessPdf", {}).get("url"),
                 "journal": item.get("journal", {}).get("name"),
             }
             formatted_data.append(formatted_item)
-        return formatted_data   
+        return formatted_data
 
     def get_s2_recommendations(self, limit: int = 10):
         pass
