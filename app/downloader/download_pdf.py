@@ -1,5 +1,5 @@
 import os
-from curl_cffi import AsyncSession , CurlError
+from curl_cffi import AsyncSession, CurlError
 from rich.progress import (
     Progress,
     BarColumn,
@@ -26,7 +26,12 @@ async def download_pdf_from_url(
         }
 
         response = await session.get(
-            pdf_url, headers=headers, impersonate="chrome", stream=True, timeout=300
+            pdf_url,
+            headers=headers,
+            impersonate="chrome",
+            stream=True,
+            timeout=300,
+            follow_redirects=True,
         )
         response.raise_for_status()
 
