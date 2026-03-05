@@ -1,4 +1,5 @@
 import asyncio
+import json
 from curl_cffi import AsyncSession
 
 from utils.s2_client import client
@@ -12,7 +13,7 @@ from agent.query_generator import generate_queries
 
 logger = get_logger(__name__)
 
-#create_tables()
+create_tables()
 
 # 1. Get User Input
 topic = input("Enter your research topic: ")
@@ -31,7 +32,7 @@ except Exception as e:
 # 3. Search and Deduplicate
 unique_papers = {}
 for i, query in enumerate(queries):
-    logger.info(f"Searching for ({i+1}/{len(queries)}): {query}")
+    logger.info(f"Searching for ({i + 1}/{len(queries)}): {query}")
     try:
         # Limit results per query to keep it manageable
         search_results = client.s2_search_api(query=query, max_results=5)
@@ -45,6 +46,11 @@ for i, query in enumerate(queries):
 
 result = list(unique_papers.values())
 logger.info(f"Found {len(result)} unique papers.")
+
+# Save the API results to a separate JSON file for easy inspection/searching
+with open("s2_search_results.json", "w", encoding="utf-8") as f:
+    json.dump(result, f, indent=4, ensure_ascii=False)
+    logger.info("Saved S2 search results to s2_search_results.json")
 
 
 async def main(papers):

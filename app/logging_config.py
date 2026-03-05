@@ -21,6 +21,7 @@ logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
     handlers=[console_handler],
+    force=True,  # Ensure our configuration overwrites any existing ones
 )
 
 

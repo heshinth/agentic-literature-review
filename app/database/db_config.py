@@ -5,8 +5,9 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from logging_config import get_logger
 import os
 
-from dotenv import load_dotenv
-load_dotenv()
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv(), override=True)
 
 logger = get_logger(__name__)
 
@@ -25,13 +26,15 @@ DATABASE_URL = URL.create(
     host=HOST,
     port=PORT,
     database=DBNAME,
-    query={"sslmode": "require"},
+    # Local postgres doesn't require SSL. Uncomment if using a remote service like Supabase
+    # query={"sslmode": "require"},
 )
 
 # Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
 SessionLocal = sessionmaker(bind=engine)
+
 
 class Base(DeclarativeBase):
     pass
@@ -43,4 +46,3 @@ try:
         logger.info("Connection successful!")
 except Exception as e:
     logger.error(f"Failed to connect: {e}")
-    

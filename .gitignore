@@ -10,6 +10,7 @@ __pycache__/
 temp_pdfs/
 logs/
 *.log
+s2_search_results.json
 
 # Distribution / packaging
 .Python
