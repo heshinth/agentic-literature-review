@@ -12,7 +12,7 @@ from agent.query_generator import generate_queries
 
 logger = get_logger(__name__)
 
-create_tables()
+#create_tables()
 
 # 1. Get User Input
 topic = input("Enter your research topic: ")

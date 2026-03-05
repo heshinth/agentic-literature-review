@@ -9,8 +9,8 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "curl-cffi>=0.14.0",
+    "groq>=1.0.0",
     "httpx>=0.28.1",
-    "litellm>=1.81.10",
     "psycopg2-binary>=2.9.11",
     "python-dotenv>=1.2.1",
     "ratelimit>=2.2.1",

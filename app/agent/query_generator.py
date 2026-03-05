@@ -1,8 +1,7 @@
-import litellm
-import os
 from pydantic import BaseModel, Field, ValidationError
-from typing import List, Optional
-from app.agent.prompt_instructions import search_query
+from typing import List
+from .prompt_instructions import search_query
+from .groq_client import client
 
 
 class QueryModel(BaseModel):
@@ -12,19 +11,14 @@ class QueryModel(BaseModel):
 
 def generate_queries(
     query: str,
-    model: str = "groq/groq/compound",
-    api_key_env: Optional[str] = "GROQ_API_KEY",
+    model: str = "llama-3.3-70b-versatile",
 ) -> QueryModel:
     """Generate search queries and reasoning for a given query string."""
-    if api_key_env:
-        key = os.environ.get(api_key_env)
-        if key:
-            os.environ["GROQ_API_KEY"] = key
-
     prompt = search_query(query)
-    response = litellm.completion(
+    response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
     )
 
     content = response.choices[0].message.content

@@ -1,10 +1,13 @@
 import httpx
 import os
+import logging
 from ratelimit import limits, sleep_and_retry
 
-from logging_config import get_logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-logger = get_logger(__name__)
+S2_DEBUG_FULL_RESPONSE = os.getenv("S2_DEBUG_FULL_RESPONSE", "0") == "1"
+
 class S2Client:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("S2_API_KEY")
@@ -28,14 +31,28 @@ class S2Client:
             "openAccessPdf": True,
             "fields": "title,abstract,authors,year,paperId,externalIds,url,isOpenAccess,openAccessPdf,journal",
         }
-        response = self.client.get("graph/v1/paper/search/", params=params)
-        logger.debug(f"Request URL: {response.url}")
-        logger.info(f"S2 Search API response status: {response.status_code}")
+        url = "graph/v1/paper/search/"
+
+        # INPUT LOG (what you send)
+        logger.info("[S2][INPUT] endpoint=%s params=%s", url, params)
+
+        response = self.client.get(url, params=params)
+
+        # OUTPUT LOG (status + URL)
+        logger.info("[S2][OUTPUT] status=%s final_url=%s", response.status_code, response.url)
+
+        # Optional full body log
+        if S2_DEBUG_FULL_RESPONSE:
+            logger.info("[S2][OUTPUT_BODY] %s", response.text)
+
         response.raise_for_status()
-        data = response.json().get("data", [])
+        data = response.json()
+
+        # Optional summary log
+        logger.info("[S2][PARSED] keys=%s", list(data.keys()))
 
         formatted_data = []
-        for item in data:
+        for item in data.get("data", []):
             formatted_item = {
                 "paper_id": item.get("paperId"),
                 "doi_id": item.get("externalIds", {}).get("DOI"),

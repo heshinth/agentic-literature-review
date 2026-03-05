@@ -31,7 +31,7 @@ async def download_pdf_from_url(
             impersonate="chrome",
             stream=True,
             timeout=300,
-            follow_redirects=True,
+            allow_redirects=True,
         )
         response.raise_for_status()
 
