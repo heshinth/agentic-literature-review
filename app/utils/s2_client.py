@@ -23,7 +23,7 @@ class S2Client:
         )
 
     @sleep_and_retry
-    @limits(calls=1, period=1.05)
+    @limits(calls=1, period=1.15)
     def s2_search_api(self, query: str, max_results: int = 10) -> dict:
         params = {
             "query": query,

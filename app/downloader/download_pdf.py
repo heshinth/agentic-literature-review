@@ -1,4 +1,5 @@
 import os
+import time
 from curl_cffi import AsyncSession, CurlError
 from rich.progress import (
     Progress,
@@ -30,7 +31,7 @@ async def download_pdf_from_url(
             headers=headers,
             impersonate="chrome",
             stream=True,
-            timeout=300,
+            timeout=600,
             allow_redirects=True,
         )
         response.raise_for_status()
@@ -48,11 +49,34 @@ async def download_pdf_from_url(
 
         with progress:
             task = progress.add_task(f"Downloading {filename}", total=total_size)
+
+            start_time = time.time()
+            downloaded_bytes = 0
+            aborted = False
+
             with open(save_path, "wb") as pdf_file:
                 async for chunk in response.aiter_content(chunk_size=1024 * 1024):
                     if chunk:
                         pdf_file.write(chunk)
-                        progress.update(task, advance=len(chunk))
+                        chunk_len = len(chunk)
+                        progress.update(task, advance=chunk_len)
+                        downloaded_bytes += chunk_len
+
+                    # Speed limit check
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time > 10:
+                        average_speed_kbps = (downloaded_bytes / 1024) / elapsed_time
+                        if average_speed_kbps < 100:
+                            print(
+                                f"[Warning] Skipping {filename}: Average speed too slow ({average_speed_kbps:.2f} KB/s)"
+                            )
+                            aborted = True
+                            break
+
+            if aborted:
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                return
 
         print(f"Saved to {save_path}")
     except CurlError as ce:
