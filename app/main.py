@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from database.create_tables import create_tables
 from logging_config import get_logger
@@ -8,6 +9,10 @@ from pipeline.search_pipeline import (
     save_search_results,
 )
 from pipeline.pdf_ingest_pipeline import process_papers
+from pipeline.embedding_pipeline import (
+    prepare_sparse_embeddings,
+    save_embedding_preview,
+)
 
 logger = get_logger(__name__)
 
@@ -34,6 +39,30 @@ async def run() -> None:
         summary["extract_empty"],
         summary["stored_text"],
     )
+
+    run_embedding_step = os.getenv("RUN_EMBEDDING_STEP", "1") == "1"
+    if run_embedding_step:
+        embedding_records, embedding_summary = prepare_sparse_embeddings(logger)
+
+        preview_path = os.getenv(
+            "EMBEDDING_PREVIEW_PATH", "logs/embedding_preview.jsonl"
+        )
+        preview_count = int(os.getenv("EMBEDDING_PREVIEW_COUNT", "100"))
+        save_embedding_preview(embedding_records, preview_path, preview_count)
+
+        logger.info(
+            "Embedding summary | papers_considered=%s papers_with_text=%s papers_chunked=%s "
+            "chunks_total=%s chunks_embedded=%s papers_missing_text=%s preview_file=%s",
+            embedding_summary["papers_considered"],
+            embedding_summary["papers_with_text"],
+            embedding_summary["papers_chunked"],
+            embedding_summary["chunks_total"],
+            embedding_summary["chunks_embedded"],
+            embedding_summary["papers_missing_text"],
+            preview_path,
+        )
+    else:
+        logger.info("Embedding step skipped (RUN_EMBEDDING_STEP != 1)")
 
 
 if __name__ == "__main__":
