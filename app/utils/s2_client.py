@@ -1,12 +1,14 @@
 import httpx
 import os
 import logging
+import time
 from ratelimit import limits, sleep_and_retry
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 S2_DEBUG_FULL_RESPONSE = os.getenv("S2_DEBUG_FULL_RESPONSE", "0") == "1"
+
 
 class S2Client:
     def __init__(self, api_key: str = None):
@@ -36,10 +38,26 @@ class S2Client:
         # INPUT LOG (what you send)
         logger.info("[S2][INPUT] endpoint=%s params=%s", url, params)
 
-        response = self.client.get(url, params=params)
+        response = None
+        for attempt in range(3):
+            response = self.client.get(url, params=params)
+            if response.status_code != 429:
+                break
+
+            retry_after = response.headers.get("Retry-After")
+            wait_seconds = float(retry_after) if retry_after else 2.0 * (attempt + 1)
+            logger.warning(
+                "[S2][RATE_LIMIT] query=%s attempt=%s waiting=%.2fs",
+                query,
+                attempt + 1,
+                wait_seconds,
+            )
+            time.sleep(wait_seconds)
 
         # OUTPUT LOG (status + URL)
-        logger.info("[S2][OUTPUT] status=%s final_url=%s", response.status_code, response.url)
+        logger.info(
+            "[S2][OUTPUT] status=%s final_url=%s", response.status_code, response.url
+        )
 
         # Optional full body log
         if S2_DEBUG_FULL_RESPONSE:

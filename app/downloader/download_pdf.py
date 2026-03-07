@@ -12,14 +12,19 @@ from rich.progress import (
 
 
 async def download_pdf_from_url(
-    session: AsyncSession, pdf_url: str, filename: str = "sample.pdf"
-) -> None:
+    session: AsyncSession,
+    pdf_url: str,
+    filename: str = "sample.pdf",
+    output_dir: str = "temp_pdfs",
+    save_to_file: bool = True,
+) -> bytes | None:
     if not pdf_url:
-        return
+        return None
 
-    save_path = f"temp_pdfs/{filename}"
+    save_path = os.path.join(output_dir, filename)
     try:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        if save_to_file:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         headers = {
             "Referer": "https://google.com",
@@ -53,11 +58,15 @@ async def download_pdf_from_url(
             start_time = time.time()
             downloaded_bytes = 0
             aborted = False
+            chunks: list[bytes] = []
 
-            with open(save_path, "wb") as pdf_file:
+            target_file = open(save_path, "wb") if save_to_file else None
+            try:
                 async for chunk in response.aiter_content(chunk_size=1024 * 1024):
                     if chunk:
-                        pdf_file.write(chunk)
+                        chunks.append(chunk)
+                        if target_file:
+                            target_file.write(chunk)
                         chunk_len = len(chunk)
                         progress.update(task, advance=chunk_len)
                         downloaded_bytes += chunk_len
@@ -72,14 +81,26 @@ async def download_pdf_from_url(
                             )
                             aborted = True
                             break
+            finally:
+                if target_file:
+                    target_file.close()
 
             if aborted:
-                if os.path.exists(save_path):
+                if save_to_file and os.path.exists(save_path):
                     os.remove(save_path)
-                return
+                return None
 
-        print(f"Saved to {save_path}")
+        pdf_bytes = b"".join(chunks)
+        if not pdf_bytes:
+            return None
+
+        if save_to_file:
+            print(f"Saved to {save_path}")
+
+        return pdf_bytes
     except CurlError as ce:
         print(f"Curl error for file {filename} ({ce.code}): {ce}")
+        return None
     except Exception as e:
         print(f"Failed to download {pdf_url}: {e}")
+        return None

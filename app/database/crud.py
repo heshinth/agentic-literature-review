@@ -4,6 +4,13 @@ from sqlalchemy import update
 from database import models
 
 
+def _sanitize_text_for_db(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = text.replace("\x00", "")
+    return "".join(ch for ch in cleaned if (ch == "\n" or ch == "\t" or ord(ch) >= 32))
+
+
 def add_paper(db: Session, paper_data: dict) -> models.S2Papers | None:
     # Filter data to ensure no extra keys cause errors
     db_paper_data = {
@@ -34,6 +41,12 @@ def add_paper(db: Session, paper_data: dict) -> models.S2Papers | None:
     return inserted_paper
 
 
+def get_paper_by_id(db: Session, paper_id: str) -> models.S2Papers | None:
+    return (
+        db.query(models.S2Papers).filter(models.S2Papers.paper_id == paper_id).first()
+    )
+
+
 def update_paper_status(db: Session, paper_id: str, status_updates: dict):
     stmt = (
         update(models.S2Papers)
@@ -45,11 +58,12 @@ def update_paper_status(db: Session, paper_id: str, status_updates: dict):
 
 
 def add_paper_text(db: Session, paper_id: str, full_text: str):
+    safe_text = _sanitize_text_for_db(full_text)
     stmt = (
         insert(models.PaperText)
-        .values(paper_id=paper_id, full_text=full_text)
+        .values(paper_id=paper_id, full_text=safe_text)
         .on_conflict_do_update(
-            index_elements=["paper_id"], set_={"full_text": full_text}
+            index_elements=["paper_id"], set_={"full_text": safe_text}
         )
     )
     db.execute(stmt)
