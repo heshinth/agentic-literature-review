@@ -1,6 +1,6 @@
-from database.db_config import engine, Base
+from app.database.db_config import engine, Base
 from sqlalchemy import text
-import database.models  # noqa: F401 (to silence unused import warning)
+import app.database.models  # noqa: F401 (to silence unused import warning)
 
 
 def create_tables():

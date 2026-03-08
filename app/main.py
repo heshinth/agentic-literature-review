@@ -1,18 +1,24 @@
 import asyncio
 import os
+import sys
+from pathlib import Path
 
-from database.create_tables import create_tables
-from logging_config import get_logger
-from pipeline.search_pipeline import (
+# Allow running as `uv run app/main.py` by adding repo root to import path.
+if __package__ in (None, ""):
+    repo_root = Path(__file__).resolve().parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+from app.database.create_tables import create_tables
+from app.logging_config import get_logger
+from app.pipeline.search_pipeline import (
     build_queries,
     search_and_deduplicate_papers,
     save_search_results,
 )
-from pipeline.pdf_ingest_pipeline import process_papers
-from pipeline.embedding_pipeline import (
-    prepare_sparse_embeddings,
-    save_embedding_preview,
-)
+from app.pipeline.pdf_ingest_pipeline import process_papers
+from app.pipeline.embedding import prepare_sparse_embeddings, save_embedding_preview
+from app.pipeline.storage import upsert_sparse_embeddings
 
 logger = get_logger(__name__)
 
@@ -28,11 +34,14 @@ async def run() -> None:
     summary = await process_papers(papers, logger)
     logger.info(
         "Pipeline summary | added_new=%s already_in_db=%s already_extracted=%s "
+        "already_downloaded=%s duplicate_url_skipped=%s "
         "missing_paper_id=%s missing_open_access_url=%s download_failed=%s "
         "extract_empty=%s stored_text=%s",
         summary["added_new"],
         summary["already_in_db"],
         summary["already_extracted"],
+        summary["already_downloaded"],
+        summary["duplicate_url_skipped"],
         summary["missing_paper_id"],
         summary["missing_open_access_url"],
         summary["download_failed"],
@@ -61,6 +70,29 @@ async def run() -> None:
             embedding_summary["papers_missing_text"],
             preview_path,
         )
+
+        run_qdrant_step = os.getenv("RUN_QDRANT_STEP", "1") == "1"
+        if run_qdrant_step:
+            qdrant_collection = os.getenv("QDRANT_COLLECTION", "papers_sparse")
+            qdrant_batch_size = int(os.getenv("QDRANT_BATCH_SIZE", "64"))
+            qdrant_summary = upsert_sparse_embeddings(
+                records=embedding_records,
+                logger=logger,
+                collection_name=qdrant_collection,
+                batch_size=qdrant_batch_size,
+            )
+            logger.info(
+                "Qdrant storage summary | collection=%s records_input=%s records_upserted=%s "
+                "batches_total=%s batches_failed=%s papers_marked_embedded=%s",
+                qdrant_collection,
+                qdrant_summary["records_input"],
+                qdrant_summary["records_upserted"],
+                qdrant_summary["batches_total"],
+                qdrant_summary["batches_failed"],
+                qdrant_summary["papers_marked_embedded"],
+            )
+        else:
+            logger.info("Qdrant storage step skipped (RUN_QDRANT_STEP != 1)")
     else:
         logger.info("Embedding step skipped (RUN_EMBEDDING_STEP != 1)")
 

@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 import pymupdf  # fitz
 from sqlalchemy.orm import Session
-from database import crud, db_config
+from app.database import crud, db_config
 
 
 def sanitize_text_for_db(text: str) -> str:

@@ -1,8 +1,8 @@
 import json
 from typing import Any
 
-from agent.query_generator import generate_queries
-from utils.s2_client import client
+from app.agent.query_generator import generate_queries
+from app.utils.s2_client import client
 
 
 def build_queries(topic: str, logger) -> list[str]:

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import update
-from database import models
+from app.database import models
 
 
 def _sanitize_text_for_db(text: str) -> str:

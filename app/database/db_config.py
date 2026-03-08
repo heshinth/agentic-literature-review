@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from logging_config import get_logger
+from app.logging_config import get_logger
 import os
 
 from dotenv import load_dotenv, find_dotenv

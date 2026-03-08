@@ -71,10 +71,13 @@ class S2Client:
 
         formatted_data = []
         for item in data.get("data", []):
+            external_ids = item.get("externalIds") or {}
+            open_access_pdf = item.get("openAccessPdf") or {}
+            journal = item.get("journal") or {}
             formatted_item = {
                 "paper_id": item.get("paperId"),
-                "doi_id": item.get("externalIds", {}).get("DOI"),
-                "arxiv_id": item.get("externalIds", {}).get("ArXiv"),
+                "doi_id": external_ids.get("DOI"),
+                "arxiv_id": external_ids.get("ArXiv"),
                 "title": item.get("title"),
                 "abstract": item.get("abstract"),
                 "authors": ", ".join(
@@ -82,8 +85,8 @@ class S2Client:
                 ),
                 "year": item.get("year"),
                 "url": item.get("url"),
-                "open_access_url": item.get("openAccessPdf", {}).get("url"),
-                "journal": item.get("journal", {}).get("name"),
+                "open_access_url": open_access_pdf.get("url"),
+                "journal": journal.get("name"),
             }
             formatted_data.append(formatted_item)
         return formatted_data
