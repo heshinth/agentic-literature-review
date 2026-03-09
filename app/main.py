@@ -19,6 +19,7 @@ from app.pipeline.search_pipeline import (
 from app.pipeline.pdf_ingest_pipeline import process_papers
 from app.pipeline.embedding import prepare_sparse_embeddings, save_embedding_preview
 from app.pipeline.storage import upsert_sparse_embeddings
+from app.pipeline.retrieval_pipeline import run_retrieval
 
 logger = get_logger(__name__)
 
@@ -95,6 +96,29 @@ async def run() -> None:
             logger.info("Qdrant storage step skipped (RUN_QDRANT_STEP != 1)")
     else:
         logger.info("Embedding step skipped (RUN_EMBEDDING_STEP != 1)")
+
+    # ── Step 7: AI Retrieval & Markdown Summary ───────────────────────────────
+    logger.info("Starting AI retrieval for topic: %s", topic)
+    markdown = await run_retrieval(topic, logger)
+    print("\n" + "=" * 60)
+    print(markdown)
+    print("=" * 60 + "\n")
+    _save_summary(markdown, topic, logger)
+
+
+def _save_summary(markdown: str, topic: str, logger) -> None:
+    """Save the generated markdown summary to outputs/{slug}.md."""
+    import re
+
+    outputs_dir = Path("outputs")
+    outputs_dir.mkdir(exist_ok=True)
+
+    slug = re.sub(r"[^\w]+", "_", topic.lower()).strip("_")
+    slug = slug[:80]  # cap filename length
+    output_path = outputs_dir / f"{slug}.md"
+
+    output_path.write_text(markdown, encoding="utf-8")
+    logger.info("Summary saved to %s", output_path)
 
 
 if __name__ == "__main__":
