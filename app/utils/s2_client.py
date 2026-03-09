@@ -5,7 +5,6 @@ import time
 from ratelimit import limits, sleep_and_retry
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 S2_DEBUG_FULL_RESPONSE = os.getenv("S2_DEBUG_FULL_RESPONSE", "0") == "1"
 
@@ -90,9 +89,6 @@ class S2Client:
             }
             formatted_data.append(formatted_item)
         return formatted_data
-
-    def get_s2_recommendations(self, limit: int = 10):
-        pass
 
 
 client = S2Client()
