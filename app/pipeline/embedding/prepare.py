@@ -69,6 +69,9 @@ def prepare_sparse_embeddings(
                     {
                         "paper_id": paper.paper_id,
                         "title": title,
+                        "year": getattr(paper, "year", None),
+                        "authors": getattr(paper, "authors", None),
+                        "journal": getattr(paper, "journal", None),
                         "chunk_index": chunk_idx,
                         "chunk_text": chunk_text,
                         "sparse_indices": indices,

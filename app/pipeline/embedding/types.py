@@ -4,6 +4,9 @@ from typing import TypedDict
 class SparseEmbeddingRecord(TypedDict):
     paper_id: str
     title: str
+    year: int | None
+    authors: str | None
+    journal: str | None
     chunk_index: int
     chunk_text: str
     sparse_indices: list[int]

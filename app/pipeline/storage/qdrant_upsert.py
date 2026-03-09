@@ -64,6 +64,9 @@ def upsert_sparse_embeddings(
                 payload = {
                     "paper_id": item["paper_id"],
                     "title": item["title"],
+                    "year": item.get("year"),
+                    "authors": item.get("authors"),
+                    "journal": item.get("journal"),
                     "chunk_index": item["chunk_index"],
                     "chunk_text": item["chunk_text"],
                     "model": item["model"],
