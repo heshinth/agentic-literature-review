@@ -11,7 +11,7 @@ temp_pdfs/
 logs/
 *.log
 s2_search_results.json
-
+outputs/
 # Distribution / packaging
 .Python
 build/

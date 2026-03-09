@@ -6,7 +6,14 @@ from app.agent.prompt_instructions import (
     retrieval_summary_prompt,
 )
 
-_MODEL = "openai/gpt-oss-120b"
+# Fast small model for binary context-sufficiency check (6K TPM on free tier).
+_CHECK_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Larger model for final summary quality (12K TPM on free tier).
+_SUMMARY_MODEL = "llama-3.3-70b-versatile"
+
+# Hard caps to stay within free-tier token limits.
+_MAX_CONTEXT_CHUNKS = 20  # chunks passed to any LLM call
+_MAX_EXCERPT_CHARS = 600  # characters per chunk excerpt in the prompt
 
 
 def _build_context_str(
@@ -22,7 +29,7 @@ def _build_context_str(
     Returns:
         Tuple of (formatted context string, ordered citation metadata list).
     """
-    # Deduplicate by (paper_id, chunk_index)
+    # Deduplicate by (paper_id, chunk_index), then cap to budget
     seen_keys: set[tuple[str, int]] = set()
     unique_chunks: list[dict] = []
     for chunk in chunks:
@@ -30,6 +37,8 @@ def _build_context_str(
         if key not in seen_keys:
             seen_keys.add(key)
             unique_chunks.append(chunk)
+
+    unique_chunks = unique_chunks[:_MAX_CONTEXT_CHUNKS]
 
     # Assign sequential citation numbers grouped by paper (order of first appearance)
     paper_citation_num: dict[str, int] = {}
@@ -63,8 +72,12 @@ def _build_context_str(
         if journal:
             header += f" — {journal}"
 
+        excerpt = chunk["chunk_text"]
+        if len(excerpt) > _MAX_EXCERPT_CHARS:
+            excerpt = excerpt[:_MAX_EXCERPT_CHARS].rstrip() + "…"
+
         lines.append(header)
-        lines.append(f'Excerpt: "{chunk["chunk_text"]}"')
+        lines.append(f'Excerpt: "{excerpt}"')
         lines.append("")
 
     context_str = "\n".join(lines).strip()
@@ -106,7 +119,7 @@ def check_needs_more(
     prompt = needs_more_context_prompt(user_query, context_str, round_num)
 
     response = groq_client.chat.completions.create(
-        model=_MODEL,
+        model=_CHECK_MODEL,
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
     )
@@ -142,7 +155,7 @@ def generate_summary(
     prompt = retrieval_summary_prompt(user_query, context_str)
 
     response = groq_client.chat.completions.create(
-        model=_MODEL,
+        model=_SUMMARY_MODEL,
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
     )
