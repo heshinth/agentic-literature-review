@@ -12,8 +12,8 @@ _CHECK_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 _SUMMARY_MODEL = "llama-3.3-70b-versatile"
 
 # Hard caps to stay within free-tier token limits.
-_MAX_CONTEXT_CHUNKS = 20  # chunks passed to any LLM call
-_MAX_EXCERPT_CHARS = 600  # characters per chunk excerpt in the prompt
+_MAX_CONTEXT_CHUNKS = 25  # chunks passed to any LLM call
+_MAX_EXCERPT_CHARS = 800  # characters per chunk excerpt in the prompt
 
 
 def _build_context_str(

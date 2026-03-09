@@ -27,7 +27,7 @@ def search_query(query: str) -> str:
 
 
 def retrieval_summary_prompt(user_query: str, context_str: str) -> str:
-    prompt = f"""You are an expert research assistant writing a detailed literature review summary.
+    prompt = f"""You are an expert research assistant writing a detailed, in-depth academic literature review.
 
 The user's research question is:
 "{user_query}"
@@ -37,14 +37,22 @@ Below are relevant excerpts from research papers, each labeled with a citation n
 {context_str}
 
 ## Instructions:
-- Write a comprehensive, well-structured markdown summary that directly and thoroughly addresses the user's research question.
-- Use markdown headers (##, ###) to organise sections by theme or topic.
-- Use inline footnote markers like [^1], [^2] whenever you reference a specific paper's findings. A single sentence may cite multiple papers, e.g. "Recent work shows X [^1][^3]."
-- Be specific: mention key findings, methods, benchmarks, and trends from the papers.
-- End your summary with a "## References" section listing each cited paper in this exact format:
+- Write a thorough literature review that is AT LEAST 800 words long in the body text (excluding the References section).
+- Structure the review with the following sections, each containing 2-4 substantive paragraphs:
+  ## Introduction — frame the research area, why it matters, and what this review covers
+  ## [Theme Section 1] — group related papers by a meaningful topic or sub-field
+  ## [Theme Section 2] — another distinct theme with detailed discussion
+  ## [Theme Section 3 if warranted] — further theme if papers support it
+  ## Discussion — synthesise trends, compare approaches, highlight agreements and contradictions across papers
+  ## Conclusion — summarise key takeaways and open problems
+  ## References
+- For each theme section: describe the problem being solved, the approach/method proposed, key results or benchmarks, and any limitations mentioned.
+- Use inline footnote markers like [^1], [^2] every time you reference a specific paper's finding. Multiple citations per sentence are encouraged, e.g. "Recent models show X [^1][^3]."
+- Be specific: name models, datasets, metrics, and numbers from the excerpts wherever available.
+- Do NOT pad with generic statements. Every sentence must be grounded in the provided excerpts.
+- End with a "## References" section listing each cited paper exactly as:
   [^N]: Title. Authors. Year. URL
-- Only use information from the provided context. Do not fabricate any facts or citations.
-- Return a JSON object with a single key "summary" whose value is the complete markdown string (including the References section).
+- Return a JSON object with a single key "summary" whose value is the complete markdown string.
 - Do not return anything outside the JSON.
 
 ### Response:"""
