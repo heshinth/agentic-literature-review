@@ -1,10 +1,13 @@
+import os
+
 from qdrant_client import QdrantClient, models
 
 SPARSE_VECTOR_NAME = "text"
 
 
 def get_qdrant_client() -> QdrantClient:
-    return QdrantClient(url="http://localhost:6333")
+    url = os.getenv("QDRANT_URL", "http://localhost:6333")
+    return QdrantClient(url=url)
 
 
 def ensure_sparse_collection(

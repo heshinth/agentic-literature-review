@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -23,7 +24,11 @@ from app.pipeline.retrieval_pipeline import run_retrieval
 
 logger = get_logger(__name__)
 
-create_tables()
+try:
+    create_tables()
+except Exception as _db_exc:
+    logger.error("DB not reachable: %s", _db_exc)
+    sys.exit(1)
 
 
 async def run() -> None:
@@ -108,8 +113,6 @@ async def run() -> None:
 
 def _save_summary(markdown: str, topic: str, logger) -> None:
     """Save the generated markdown summary to outputs/{slug}.md."""
-    import re
-
     outputs_dir = Path("outputs")
     outputs_dir.mkdir(exist_ok=True)
 
@@ -122,4 +125,11 @@ def _save_summary(markdown: str, topic: str, logger) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        sys.exit(0)
+    except Exception as exc:
+        logger.error("Fatal error: %s", exc)
+        sys.exit(1)

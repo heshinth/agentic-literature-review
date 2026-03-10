@@ -4,8 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.create_tables import create_tables
+from app.logging_config import get_logger
 from app.api.routes.health import router as health_router
 from app.api.routes.review import router as review_router
+
+_logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -13,11 +16,7 @@ async def lifespan(app: FastAPI):
     try:
         create_tables()
     except Exception as exc:
-        import logging
-
-        logging.getLogger(__name__).warning(
-            "DB not reachable at startup (create_tables skipped): %s", exc
-        )
+        _logger.warning("DB not reachable at startup (create_tables skipped): %s", exc)
     yield
 
 
