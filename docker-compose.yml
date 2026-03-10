@@ -44,7 +44,7 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    build: ./backend
     container_name: literature_app
     env_file: .env
     environment:
@@ -54,9 +54,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./temp_pdfs:/app/temp_pdfs
-      - ./logs:/app/logs
-      - ./outputs:/app/outputs
+      - ./backend/temp_pdfs:/app/temp_pdfs
+      - ./backend/logs:/app/logs
+      - ./backend/outputs:/app/outputs
     depends_on:
       postgres:
         condition: service_healthy
