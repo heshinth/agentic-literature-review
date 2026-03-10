@@ -11,18 +11,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-
-  pgweb:
-    image: sosedoff/pgweb
-    container_name: literature_pgweb
-    environment:
-      # Connect pgweb to the database container using docker DNS
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/literature_db?sslmode=disable
-    ports:
-      - "8081:8081"
-    depends_on:
-      - postgres
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -32,6 +25,43 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: literature_pgweb
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/literature_db?sslmode=disable
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: literature_app
+    env_file: .env
+    environment:
+      # Override .env values to use Docker service names instead of localhost
+      DB_HOST: postgres
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./temp_pdfs:/app/temp_pdfs
+      - ./logs:/app/logs
+      - ./outputs:/app/outputs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
