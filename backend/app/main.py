@@ -34,7 +34,7 @@ except Exception as _db_exc:
 async def run() -> None:
     topic = input("Enter your research topic: ")
     queries = build_queries(topic, logger)
-    papers = search_and_deduplicate_papers(queries, logger)
+    papers = search_and_deduplicate_papers(queries, logger, topic=topic)
     save_search_results(papers, logger)
 
     summary = await process_papers(papers, logger)

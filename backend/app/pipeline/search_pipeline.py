@@ -1,8 +1,90 @@
 import json
+import os
+import re
+from datetime import datetime
 from typing import Any
 
 from app.agent.query_generator import generate_queries
 from app.utils.s2_client import client
+
+
+def _tokenize(text: str) -> set[str]:
+    if not text:
+        return set()
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _paper_relevance_score(paper: dict[str, Any], topic_tokens: set[str]) -> float:
+    title_tokens = _tokenize(str(paper.get("title") or ""))
+    abstract_tokens = _tokenize(str(paper.get("abstract") or ""))
+
+    if not topic_tokens:
+        return 0.0
+
+    title_overlap = len(topic_tokens & title_tokens)
+    abstract_overlap = len(topic_tokens & abstract_tokens)
+
+    # Strongly prefer title/abstract lexical overlap with the user topic.
+    score = (3.0 * title_overlap) + (2.0 * abstract_overlap)
+
+    year = paper.get("year")
+    if isinstance(year, int):
+        current_year = datetime.now().year
+        recency_bonus = max(0.0, min(1.5, (year - (current_year - 10)) * 0.15))
+        score += recency_bonus
+
+    if paper.get("open_access_url"):
+        score += 0.25
+
+    if not paper.get("abstract"):
+        score -= 0.75
+
+    return round(score, 4)
+
+
+def rank_and_filter_papers(
+    papers: list[dict[str, Any]],
+    topic: str,
+    logger,
+    max_papers: int = 30,
+) -> list[dict[str, Any]]:
+    if not papers:
+        return papers
+
+    topic_tokens = _tokenize(topic)
+    if not topic_tokens:
+        logger.info("Ranking skipped: topic tokenization produced no terms.")
+        return papers[:max_papers]
+
+    scored: list[dict[str, Any]] = []
+    for paper in papers:
+        score = _paper_relevance_score(paper, topic_tokens)
+        item = dict(paper)
+        item["relevance_score"] = score
+        scored.append(item)
+
+    scored.sort(key=lambda p: p.get("relevance_score", 0.0), reverse=True)
+    filtered = scored[:max_papers]
+
+    logger.info(
+        "Ranked papers by abstract/title relevance: kept=%s dropped=%s max_papers=%s",
+        len(filtered),
+        max(0, len(scored) - len(filtered)),
+        max_papers,
+    )
+
+    if filtered:
+        top_preview = [
+            {
+                "paper_id": p.get("paper_id"),
+                "year": p.get("year"),
+                "score": p.get("relevance_score"),
+            }
+            for p in filtered[:5]
+        ]
+        logger.info("Top ranked paper preview: %s", top_preview)
+
+    return filtered
 
 
 def build_queries(topic: str, logger) -> list[str]:
@@ -18,7 +100,11 @@ def build_queries(topic: str, logger) -> list[str]:
 
 
 def search_and_deduplicate_papers(
-    queries: list[str], logger, max_results_per_query: int = 5
+    queries: list[str],
+    logger,
+    max_results_per_query: int = 5,
+    topic: str | None = None,
+    max_ranked_papers: int | None = None,
 ) -> list[dict[str, Any]]:
     unique_papers: dict[str, dict[str, Any]] = {}
 
@@ -39,6 +125,20 @@ def search_and_deduplicate_papers(
 
     result = list(unique_papers.values())
     logger.info(f"Found {len(result)} unique papers.")
+
+    ranking_topic = topic or ""
+    ranked_cap = max_ranked_papers
+    if ranked_cap is None:
+        ranked_cap = int(os.getenv("MAX_RANKED_PAPERS", "30"))
+
+    if ranking_topic.strip():
+        return rank_and_filter_papers(
+            result,
+            topic=ranking_topic,
+            logger=logger,
+            max_papers=ranked_cap,
+        )
+
     return result
 
 

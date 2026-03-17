@@ -70,7 +70,12 @@ async def _run_ingestion(topic: str, logger) -> None:
     )
 
     queries = build_queries(topic, logger)
-    papers = search_and_deduplicate_papers(queries, logger, max_results_per_query=5)
+    papers = search_and_deduplicate_papers(
+        queries,
+        logger,
+        max_results_per_query=5,
+        topic=topic,
+    )
 
     if not papers:
         logger.warning("Re-ingestion: no papers found via Semantic Scholar.")

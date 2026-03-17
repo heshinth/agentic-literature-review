@@ -61,7 +61,8 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
         # Step 2 — search & deduplicate
         await queue.put(_sse("status", "Searching and deduplicating papers...", step=2))
         papers = await loop.run_in_executor(
-            None, search_and_deduplicate_papers, queries, logger
+            None,
+            lambda: search_and_deduplicate_papers(queries, logger, topic=topic),
         )
         await loop.run_in_executor(None, save_search_results, papers, logger)
 

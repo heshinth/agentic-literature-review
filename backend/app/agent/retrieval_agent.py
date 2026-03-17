@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.agent.groq_client import client as groq_client
 from app.agent.prompt_instructions import (
@@ -14,6 +15,62 @@ _SUMMARY_MODEL = "llama-3.3-70b-versatile"
 # Hard caps to stay within free-tier token limits.
 _MAX_CONTEXT_CHUNKS = 25  # chunks passed to any LLM call
 _MAX_EXCERPT_CHARS = 800  # characters per chunk excerpt in the prompt
+
+
+def _clean_reference_field(value: object, fallback: str = "") -> str:
+    text = str(value or fallback).strip()
+    return re.sub(r"\s+", " ", text)
+
+
+def _extract_used_citation_numbers(markdown: str) -> list[int]:
+    nums = sorted({int(n) for n in re.findall(r"\[\^(\d+)\]", markdown)})
+    return nums
+
+
+def _strip_existing_references(markdown: str) -> str:
+    match = re.search(r"\n##\s+References\b", markdown, flags=re.IGNORECASE)
+    if not match:
+        return markdown.rstrip()
+    return markdown[: match.start()].rstrip()
+
+
+def _build_references_section(
+    citation_list: list[dict],
+    used_nums: list[int],
+) -> str:
+    by_num = {int(item.get("citation_num", 0)): item for item in citation_list}
+
+    lines: list[str] = []
+    for n in used_nums:
+        item = by_num.get(n, {})
+        title = _clean_reference_field(item.get("title"), "Unknown Title")
+        authors = _clean_reference_field(item.get("authors"), "Unknown Authors")
+        year = _clean_reference_field(item.get("year"), "Unknown Year")
+        url = _clean_reference_field(item.get("url"), "N/A")
+        lines.append(f"[^%s]: %s. %s. %s. %s" % (n, title, authors, year, url))
+
+    if not lines:
+        return "## References\n_No citations were used in the generated summary._"
+
+    return "## References\n" + "\n".join(lines)
+
+
+def _sanitize_summary_markdown(markdown: str, citation_list: list[dict]) -> str:
+    body = _strip_existing_references(markdown)
+
+    used_nums = _extract_used_citation_numbers(body)
+    if not used_nums:
+        available_nums = sorted(
+            {
+                int(item.get("citation_num", 0))
+                for item in citation_list
+                if item.get("citation_num")
+            }
+        )
+        used_nums = available_nums
+
+    references = _build_references_section(citation_list, used_nums)
+    return f"{body}\n\n{references}\n"
 
 
 def _build_context_str(
@@ -151,7 +208,7 @@ def generate_summary(
 
     Returns the full markdown string including the References section.
     """
-    context_str, _ = _build_context_str(chunks, papers_meta)
+    context_str, citation_list = _build_context_str(chunks, papers_meta)
     prompt = retrieval_summary_prompt(user_query, context_str)
 
     response = groq_client.chat.completions.create(
@@ -163,6 +220,7 @@ def generate_summary(
 
     try:
         result = json.loads(content)
-        return result.get("summary", content)
+        raw_markdown = result.get("summary", content)
+        return _sanitize_summary_markdown(raw_markdown, citation_list)
     except (json.JSONDecodeError, ValueError):
-        return content
+        return _sanitize_summary_markdown(content, citation_list)
