@@ -22,6 +22,8 @@ export function useResearch() {
 
   const markdown = ref("");
   const errorMessage = ref("");
+  const warningMessage = ref("");
+  const malformedEventCount = ref(0);
   const statusHistory = ref<StatusEvent[]>([]);
 
   const abortController = ref<AbortController | null>(null);
@@ -106,6 +108,8 @@ export function useResearch() {
     latestMessage.value = "Idle";
     markdown.value = "";
     errorMessage.value = "";
+    warningMessage.value = "";
+    malformedEventCount.value = 0;
     statusHistory.value = [];
     isCancelled.value = false;
   };
@@ -123,6 +127,7 @@ export function useResearch() {
 
     clearRunData();
     isRunning.value = true;
+    latestMessage.value = "Connecting to backend...";
 
     const controller = new AbortController();
     abortController.value = controller;
@@ -155,7 +160,16 @@ export function useResearch() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      const parser = createSseParser({ onEvent: applyEvent });
+      const parser = createSseParser({
+        onEvent: applyEvent,
+        onMalformedEvent: () => {
+          malformedEventCount.value += 1;
+          warningMessage.value =
+            malformedEventCount.value === 1
+              ? "Received a malformed stream event. Continuing with valid events."
+              : `Received ${malformedEventCount.value} malformed stream events. Continuing with valid events.`;
+        },
+      });
 
       while (true) {
         const { value, done } = await reader.read();
@@ -171,8 +185,11 @@ export function useResearch() {
       parser.flush();
 
       if (!markdown.value && !errorMessage.value && !isCancelled.value) {
+        const completedStep = currentStep.value || 0;
         errorMessage.value =
-          "Stream ended before a final result event was received.";
+          completedStep > 0
+            ? `Stream disconnected before completion at step ${completedStep}/${totalSteps.value}. Please retry.`
+            : "Stream ended before a final result event was received.";
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -183,7 +200,14 @@ export function useResearch() {
       } else {
         const message =
           error instanceof Error ? error.message : "Unexpected stream error.";
-        errorMessage.value = message;
+        const looksUnavailable =
+          message.includes("Failed to fetch") ||
+          message.includes("NetworkError") ||
+          message.includes("Load failed");
+
+        errorMessage.value = looksUnavailable
+          ? `Backend is unreachable at ${config.public.apiBaseUrl}. Ensure the API server is running and CORS allows this frontend.`
+          : message;
       }
     } finally {
       isRunning.value = false;
@@ -216,6 +240,8 @@ export function useResearch() {
     latestMessage,
     markdown,
     errorMessage,
+    warningMessage,
+    malformedEventCount,
     statusHistory,
     validationError,
     canSubmit,

@@ -8,6 +8,14 @@
           class="btn"
           type="button"
           :disabled="!markdown"
+          @click="downloadMarkdown"
+        >
+          Download Markdown
+        </button>
+        <button
+          class="btn"
+          type="button"
+          :disabled="!markdown"
           @click="copyMarkdown"
         >
           {{ copied ? "Copied" : "Copy Markdown" }}
@@ -25,7 +33,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { marked } from "marked";
+import MarkdownIt from "markdown-it";
+import markdownItFootnote from "markdown-it-footnote";
 import sanitizeHtml from "sanitize-html";
 
 const props = defineProps<{
@@ -34,12 +43,20 @@ const props = defineProps<{
 
 const copied = ref(false);
 
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+  typographer: true,
+});
+md.use(markdownItFootnote);
+
 const safeHtml = computed(() => {
   if (!props.markdown) {
     return "";
   }
 
-  const rendered = marked.parse(props.markdown, { async: false });
+  const rendered = md.render(props.markdown);
   return sanitizeHtml(rendered, {
     allowedTags: [
       "h1",
@@ -101,6 +118,29 @@ const copyMarkdown = async () => {
     copied.value = false;
   }
 };
+
+const downloadMarkdown = () => {
+  if (!props.markdown) {
+    return;
+  }
+
+  const safeDate = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `literature-review-${safeDate}.md`;
+
+  const blob = new Blob([props.markdown], {
+    type: "text/markdown;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+};
 </script>
 
 <style scoped>
@@ -141,6 +181,9 @@ h2 {
 
 .actions {
   margin-left: auto;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 .btn {

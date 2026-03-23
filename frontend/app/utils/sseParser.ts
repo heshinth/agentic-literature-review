@@ -8,6 +8,7 @@ export interface ResearchStreamEvent {
 
 interface SseParserOptions {
   onEvent: (event: ResearchStreamEvent) => void;
+  onMalformedEvent?: (payload: string) => void;
 }
 
 /**
@@ -42,7 +43,7 @@ export function createSseParser(options: SseParserOptions) {
       const parsed = JSON.parse(payload) as ResearchStreamEvent;
       options.onEvent(parsed);
     } catch {
-      // Ignore malformed payloads instead of breaking the entire stream.
+      options.onMalformedEvent?.(payload);
     }
   };
 

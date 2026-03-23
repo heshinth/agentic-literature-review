@@ -10,14 +10,19 @@
             and render the final literature review markdown.
           </p>
         </div>
-        <p class="api-target">API target {{ apiBaseUrl }}</p>
       </header>
 
       <section class="status-strip" role="status" aria-live="polite">
-        <h2>4. Error and System Status</h2>
+        <div class="health-pill" :class="healthClass">
+          <span class="health-dot" />
+          <span class="health-label">{{ healthLabel }}</span>
+        </div>
         <p class="status-text" v-if="errorMessage">{{ errorMessage }}</p>
         <p class="status-text" v-else-if="isCancelled">
           Research run cancelled.
+        </p>
+        <p class="status-text status-warning" v-else-if="warningMessage">
+          {{ warningMessage }}
         </p>
         <p class="status-text" v-else-if="isRunning">
           Streaming events from backend...
@@ -53,11 +58,60 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useResearch } from "~/composables/useResearch";
 
 const config = useRuntimeConfig();
 const apiBaseUrl = config.public.apiBaseUrl;
+const backendHealthy = ref<boolean | null>(null);
+const isCheckingHealth = ref(false);
+
+let healthPollTimer: ReturnType<typeof setInterval> | null = null;
+
+const healthLabel = computed(() => {
+  if (backendHealthy.value === true) {
+    return "Backend online";
+  }
+  if (backendHealthy.value === false) {
+    return "Backend offline";
+  }
+  return "Checking backend";
+});
+
+const healthClass = computed(() => {
+  if (backendHealthy.value === true) {
+    return "is-online";
+  }
+  if (backendHealthy.value === false) {
+    return "is-offline";
+  }
+  return "is-checking";
+});
+
+const checkBackendHealth = async () => {
+  if (isCheckingHealth.value) {
+    return;
+  }
+  isCheckingHealth.value = true;
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/health`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      backendHealthy.value = false;
+      return;
+    }
+
+    const payload = (await response.json()) as { status?: string };
+    backendHealthy.value = payload.status === "ok";
+  } catch {
+    backendHealthy.value = false;
+  } finally {
+    isCheckingHealth.value = false;
+  }
+};
 
 const {
   topic,
@@ -68,6 +122,7 @@ const {
   latestMessage,
   markdown,
   errorMessage,
+  warningMessage,
   statusHistory,
   validationError,
   canSubmit,
@@ -77,7 +132,18 @@ const {
   resetResearch,
 } = useResearch();
 
+onMounted(() => {
+  checkBackendHealth();
+  healthPollTimer = setInterval(() => {
+    checkBackendHealth();
+  }, 5000);
+});
+
 onBeforeUnmount(() => {
+  if (healthPollTimer) {
+    clearInterval(healthPollTimer);
+    healthPollTimer = null;
+  }
   cancelResearch();
 });
 </script>
@@ -124,7 +190,6 @@ onBeforeUnmount(() => {
 
 .hero {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
   background: linear-gradient(
@@ -160,38 +225,79 @@ h1 {
   color: #22314d;
 }
 
-.api-target {
-  margin: 0;
-  border: 1px solid rgba(15, 50, 90, 0.2);
-  background: #f6fbff;
-  border-radius: 999px;
-  padding: 0.45rem 0.75rem;
-  color: #133869;
-  font-size: 0.83rem;
-  font-weight: 600;
-}
-
 .status-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 0.9),
     rgba(250, 252, 255, 0.84)
   );
   border: 1px solid rgba(18, 40, 70, 0.13);
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
 }
 
-.status-strip h2 {
-  margin: 0;
-  font-size: 0.94rem;
-  letter-spacing: 0.03em;
+.health-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.health-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.health-pill.is-online {
+  color: #166534;
+  background: rgba(187, 247, 208, 0.42);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.health-pill.is-online .health-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.health-pill.is-offline {
+  color: #991b1b;
+  background: rgba(254, 202, 202, 0.45);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.health-pill.is-offline .health-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.health-pill.is-checking {
+  color: #1e3a8a;
+  background: rgba(191, 219, 254, 0.45);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.health-pill.is-checking .health-dot {
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .status-text {
-  margin: 0.35rem 0 0;
+  margin: 0;
   color: #314661;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
+}
+
+.status-warning {
+  color: #8a4b00;
 }
 
 .grid-top {
@@ -207,18 +313,14 @@ h1 {
 
   .hero {
     padding: 1rem;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .api-target {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .grid-top {
     grid-template-columns: 1fr;
+  }
+
+  .status-strip {
+    border-radius: 14px;
   }
 }
 </style>
