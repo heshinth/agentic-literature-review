@@ -2,6 +2,7 @@
   <div class="page-root">
     <main class="app-shell">
       <header class="hero">
+        <div class="logo-box">🤖</div>
         <div>
           <p class="kicker">Agentic Literature Review</p>
           <h1>Research Console</h1>
@@ -202,6 +203,18 @@ onBeforeUnmount(() => {
   padding: 1.25rem;
   backdrop-filter: blur(4px);
   box-shadow: 0 14px 30px rgba(17, 26, 43, 0.09);
+}
+
+.logo-box {
+  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .kicker {
