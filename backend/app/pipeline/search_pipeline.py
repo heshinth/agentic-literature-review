@@ -1,7 +1,8 @@
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from app.agent.query_generator import generate_queries
@@ -143,8 +144,47 @@ def search_and_deduplicate_papers(
 
 
 def save_search_results(
-    papers: list[dict[str, Any]], logger, output_file: str = "s2_search_results.json"
+    papers: list[dict[str, Any]],
+    logger,
+    output_file: str = "s2_search_results.json",
+    topic: str | None = None,
+    run_id: str | None = None,
 ) -> None:
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(papers, f, indent=4, ensure_ascii=False)
     logger.info(f"Saved S2 search results to {output_file}")
+
+    if not topic or not topic.strip():
+        return
+
+    ranked_dir = Path(os.getenv("RANKED_ARTIFACT_DIR", "logs/ranked"))
+    ranked_dir.mkdir(parents=True, exist_ok=True)
+
+    topic_slug = re.sub(r"[^\w]+", "_", topic.lower()).strip("_")[:80] or "topic"
+    artifact_run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    artifact_path = ranked_dir / f"{artifact_run_id}_{topic_slug}.json"
+
+    ranked_payload = {
+        "run_id": artifact_run_id,
+        "topic": topic,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(papers),
+        "selection_reason": "Top ranked papers after deduplication and relevance scoring",
+        "papers": [
+            {
+                "rank": idx,
+                "paper_id": paper.get("paper_id"),
+                "title": paper.get("title"),
+                "year": paper.get("year"),
+                "relevance_score": paper.get("relevance_score"),
+                "has_open_access_url": bool(paper.get("open_access_url")),
+            }
+            for idx, paper in enumerate(papers, start=1)
+        ],
+    }
+
+    artifact_path.write_text(
+        json.dumps(ranked_payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    logger.info("Saved ranked artifact to %s", artifact_path)

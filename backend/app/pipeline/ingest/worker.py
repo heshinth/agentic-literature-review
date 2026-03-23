@@ -27,13 +27,13 @@ async def download_and_extract_one(
     doi = paper_data.get("doi_id")
 
     # Start with Semantic Scholar OA URL, then try Unpaywall DOI fallback URLs.
-    candidate_urls: list[str] = []
+    candidate_urls: list[dict[str, str]] = []
     seen_urls: set[str] = set()
 
     url = paper_data.get("open_access_url")
     if isinstance(url, str) and url.strip():
         cleaned = url.strip()
-        candidate_urls.append(cleaned)
+        candidate_urls.append({"url": cleaned, "source": "semantic_scholar"})
         seen_urls.add(cleaned)
 
     if isinstance(doi, str) and doi.strip():
@@ -41,7 +41,7 @@ async def download_and_extract_one(
             fallback_urls = await asyncio.to_thread(get_oa_status, doi.strip())
             for fallback in fallback_urls:
                 if fallback not in seen_urls:
-                    candidate_urls.append(fallback)
+                    candidate_urls.append({"url": fallback, "source": "unpaywall"})
                     seen_urls.add(fallback)
             if fallback_urls:
                 logger.info(
@@ -68,7 +68,17 @@ async def download_and_extract_one(
     async with semaphore:
         logger.info(f"Downloading and extracting: {paper_id} | {title}")
         pdf_bytes = None
-        for candidate_url in candidate_urls:
+        successful_source = ""
+        successful_url = ""
+        for candidate in candidate_urls:
+            candidate_url = candidate["url"]
+            source = candidate["source"]
+            logger.info(
+                "Download attempt for %s from source=%s url=%s",
+                paper_id,
+                source,
+                candidate_url,
+            )
             pdf_bytes = await download_pdf_from_url(
                 session=session,
                 pdf_url=candidate_url,
@@ -76,6 +86,13 @@ async def download_and_extract_one(
                 save_to_file=False,
             )
             if pdf_bytes:
+                successful_source = source
+                successful_url = candidate_url
+                logger.info(
+                    "Download succeeded for %s using source=%s",
+                    paper_id,
+                    source,
+                )
                 break
 
         if not pdf_bytes:
@@ -93,5 +110,7 @@ async def download_and_extract_one(
             "paper_id": paper_id,
             "title": title,
             "status": "downloaded_and_extracted",
+            "download_source": successful_source,
+            "download_url": successful_url,
             "text": extracted_text or "",
         }

@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import traceback
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import APIRouter
@@ -9,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.schemas import ReviewRequest
 from app.logging_config import get_logger
+from app.pipeline.run_artifacts import generate_run_id, save_run_manifest
 
 router = APIRouter(tags=["review"])
 
@@ -38,6 +40,15 @@ async def _event_stream(queue: asyncio.Queue) -> AsyncGenerator[str, None]:
 
 
 async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
+    run_id = generate_run_id("api")
+    started_at = datetime.now(timezone.utc).isoformat()
+    queries: list[str] = []
+    papers: list[dict] = []
+    ingest_summary: dict | None = None
+    embedding_summary: dict | None = None
+    qdrant_summary: dict | None = None
+    markdown = ""
+
     try:
         from app.pipeline.search_pipeline import (
             build_queries,
@@ -64,19 +75,27 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
             None,
             lambda: search_and_deduplicate_papers(queries, logger, topic=topic),
         )
-        await loop.run_in_executor(None, save_search_results, papers, logger)
+        await loop.run_in_executor(
+            None,
+            lambda: save_search_results(
+                papers,
+                logger,
+                topic=topic,
+                run_id=run_id,
+            ),
+        )
 
         # Step 3 — download & extract PDFs
         await queue.put(
             _sse("status", f"Downloading and extracting {len(papers)} PDFs...", step=3)
         )
-        await process_papers(papers, logger)
+        ingest_summary = await process_papers(papers, logger)
 
         # Step 4 — sparse embeddings
         run_embedding = os.getenv("RUN_EMBEDDING_STEP", "1") == "1"
         if run_embedding:
             await queue.put(_sse("status", "Creating sparse embeddings...", step=4))
-            embedding_records, _ = await loop.run_in_executor(
+            embedding_records, embedding_summary = await loop.run_in_executor(
                 None, prepare_sparse_embeddings, logger
             )
 
@@ -98,7 +117,7 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
                 await queue.put(_sse("status", "Storing vectors in Qdrant...", step=5))
                 collection = os.getenv("QDRANT_COLLECTION", "papers_sparse")
                 batch_size = int(os.getenv("QDRANT_BATCH_SIZE", "64"))
-                await loop.run_in_executor(
+                qdrant_summary = await loop.run_in_executor(
                     None,
                     lambda: upsert_sparse_embeddings(
                         records=embedding_records,
@@ -120,6 +139,21 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
         logger.error("Pipeline error: %s", traceback.format_exc())
         await queue.put(_sse("error", f"Pipeline failed: {exc}"))
     finally:
+        finished_at = datetime.now(timezone.utc).isoformat()
+        manifest = {
+            "run_id": run_id,
+            "mode": "api",
+            "topic": topic,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "query_count": len(queries),
+            "ranked_paper_count": len(papers),
+            "ingest_summary": ingest_summary,
+            "embedding_summary": embedding_summary,
+            "qdrant_summary": qdrant_summary,
+            "markdown_char_count": len(markdown or ""),
+        }
+        save_run_manifest(manifest, logger, run_id=run_id)
         await queue.put(None)  # sentinel — always close the stream
 
 

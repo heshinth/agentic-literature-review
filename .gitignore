@@ -12,6 +12,8 @@ logs/
 *.log
 s2_search_results.json
 outputs/
+export_project_to_md.py
+project_summary.md
 # Distribution / packaging
 .Python
 build/

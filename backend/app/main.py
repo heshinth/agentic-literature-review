@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Allow running as `uv run app/main.py` by adding repo root to import path.
@@ -21,6 +22,7 @@ from app.pipeline.pdf_ingest_pipeline import process_papers
 from app.pipeline.embedding import prepare_sparse_embeddings, save_embedding_preview
 from app.pipeline.storage import upsert_sparse_embeddings
 from app.pipeline.retrieval_pipeline import run_retrieval
+from app.pipeline.run_artifacts import generate_run_id, save_run_manifest
 
 logger = get_logger(__name__)
 
@@ -33,9 +35,12 @@ except Exception as _db_exc:
 
 async def run() -> None:
     topic = input("Enter your research topic: ")
+    run_id = generate_run_id("cli")
+    started_at = datetime.now(timezone.utc).isoformat()
+
     queries = build_queries(topic, logger)
     papers = search_and_deduplicate_papers(queries, logger, topic=topic)
-    save_search_results(papers, logger)
+    save_search_results(papers, logger, topic=topic, run_id=run_id)
 
     summary = await process_papers(papers, logger)
     logger.info(
@@ -54,6 +59,9 @@ async def run() -> None:
         summary["extract_empty"],
         summary["stored_text"],
     )
+
+    embedding_summary: dict | None = None
+    qdrant_summary: dict | None = None
 
     run_embedding_step = os.getenv("RUN_EMBEDDING_STEP", "1") == "1"
     if run_embedding_step:
@@ -108,10 +116,27 @@ async def run() -> None:
     print("\n" + "=" * 60)
     print(markdown)
     print("=" * 60 + "\n")
-    _save_summary(markdown, topic, logger)
+    summary_path = _save_summary(markdown, topic, logger)
+
+    finished_at = datetime.now(timezone.utc).isoformat()
+    manifest = {
+        "run_id": run_id,
+        "mode": "cli",
+        "topic": topic,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "query_count": len(queries),
+        "ranked_paper_count": len(papers),
+        "ingest_summary": summary,
+        "embedding_summary": embedding_summary,
+        "qdrant_summary": qdrant_summary,
+        "summary_output_path": str(summary_path),
+        "markdown_char_count": len(markdown or ""),
+    }
+    save_run_manifest(manifest, logger, run_id=run_id)
 
 
-def _save_summary(markdown: str, topic: str, logger) -> None:
+def _save_summary(markdown: str, topic: str, logger) -> Path:
     """Save the generated markdown summary to outputs/{slug}.md."""
     outputs_dir = Path("outputs")
     outputs_dir.mkdir(exist_ok=True)
@@ -122,6 +147,7 @@ def _save_summary(markdown: str, topic: str, logger) -> None:
 
     output_path.write_text(markdown, encoding="utf-8")
     logger.info("Summary saved to %s", output_path)
+    return output_path
 
 
 if __name__ == "__main__":
