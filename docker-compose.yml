@@ -64,6 +64,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+    container_name: literature_frontend
+    environment:
+      # Browser-side calls should target backend published on the host.
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   qdrant_data:
