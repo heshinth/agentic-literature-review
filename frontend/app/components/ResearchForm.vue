@@ -68,108 +68,133 @@ const onTopicInput = (event: Event) => {
 <style scoped>
 .card {
   background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.95),
-    rgba(246, 250, 255, 0.86)
+    150deg,
+    rgba(255, 255, 255, 0.78),
+    rgba(244, 250, 255, 0.7)
   );
-  border: 1px solid rgba(26, 33, 52, 0.12);
-  border-radius: 20px;
-  padding: 1.15rem;
-  box-shadow: 0 10px 26px rgba(17, 26, 43, 0.08);
+  border: 1px solid rgba(17, 31, 56, 0.14);
+  border-radius: 1.28rem;
+  padding: 1.1rem;
+  box-shadow: 0 14px 26px rgba(17, 31, 56, 0.08);
+  backdrop-filter: blur(8px);
 }
 
 .card-head {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.92rem;
 }
 
 .eyebrow {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #7a3f00;
+  letter-spacing: 0.17em;
+  color: #cf6129;
   font-weight: 700;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
 }
 
 h2 {
-  margin: 0.25rem 0 0;
-  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  margin: 0.3rem 0 0;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: clamp(1.14rem, 2vw, 1.4rem);
+  letter-spacing: -0.02em;
 }
 
 .topic-form {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.78rem;
+  min-width: 0;
 }
 
 label {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
+  color: rgba(17, 31, 56, 0.9);
 }
 
 textarea {
   width: 100%;
-  border: 1px solid rgba(22, 34, 57, 0.2);
-  border-radius: 12px;
-  padding: 0.75rem 0.8rem;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: block;
+  border: 1px solid rgba(17, 31, 56, 0.2);
+  border-radius: 0.88rem;
+  padding: 0.84rem 0.88rem;
   resize: vertical;
-  min-height: 92px;
+  min-height: 108px;
   font: inherit;
-  color: inherit;
-  background: #fffefb;
+  color: rgba(17, 31, 56, 0.95);
+  background: rgba(255, 255, 255, 0.82);
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
 textarea:focus-visible {
-  outline: 2px solid rgba(0, 125, 128, 0.4);
-  outline-offset: 1px;
+  outline: none;
+  border-color: rgba(15, 143, 124, 0.62);
+  box-shadow: 0 0 0 4px rgba(15, 143, 124, 0.18);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .warning {
   margin: 0;
-  color: #9a3412;
+  color: #a93f1f;
   font-size: 0.86rem;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.58rem;
 }
 
 .btn {
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 999px;
-  padding: 0.56rem 0.96rem;
+  padding: 0.56rem 1rem;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition:
     transform 140ms ease,
-    opacity 140ms ease;
+    opacity 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
 }
 
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .btn:not(:disabled):hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
 }
 
 .btn-primary {
-  color: #f4faff;
-  background: linear-gradient(90deg, #194f84 0%, #036f73 100%);
+  color: #f7fbff;
+  background: linear-gradient(92deg, #0f5f96 0%, #0f8f7c 100%);
+  box-shadow: 0 8px 16px rgba(15, 95, 150, 0.24);
 }
 
 .btn-ghost {
-  color: #0f2b4e;
-  border: 1px solid rgba(15, 43, 78, 0.2);
-  background: #f7fbff;
+  color: #194168;
+  border-color: rgba(25, 65, 104, 0.22);
+  background: rgba(248, 252, 255, 0.76);
 }
 
 .btn-muted {
-  color: #4f4f62;
-  border: 1px solid rgba(79, 79, 98, 0.2);
-  background: #f7f7fc;
+  color: #444b61;
+  border-color: rgba(68, 75, 97, 0.2);
+  background: rgba(248, 248, 252, 0.72);
+}
+
+@media (max-width: 850px) {
+  .card {
+    padding: 0.95rem;
+  }
 }
 </style>

@@ -146,55 +146,66 @@ const downloadMarkdown = () => {
 <style scoped>
 .card {
   background: linear-gradient(
-    165deg,
-    rgba(255, 255, 255, 0.95),
-    rgba(255, 248, 240, 0.86)
+    155deg,
+    rgba(255, 255, 255, 0.82),
+    rgba(255, 247, 238, 0.7)
   );
-  border: 1px solid rgba(26, 33, 52, 0.12);
-  border-radius: 20px;
-  padding: 1.15rem;
-  box-shadow: 0 10px 26px rgba(17, 26, 43, 0.08);
+  border: 1px solid rgba(17, 31, 56, 0.14);
+  border-radius: 1.28rem;
+  padding: 1.1rem;
+  box-shadow: 0 14px 26px rgba(17, 31, 56, 0.08);
+  backdrop-filter: blur(8px);
 }
 
 .card-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem 1rem;
-  margin-bottom: 0.8rem;
+  gap: 0.56rem 1rem;
+  margin-bottom: 0.86rem;
 }
 
 .eyebrow {
   margin: 0;
   width: 100%;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #8a2d08;
+  letter-spacing: 0.17em;
+  color: #c7541e;
   font-weight: 700;
+  font-family: "Space Grotesk", "Manrope", sans-serif;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: clamp(1.14rem, 2vw, 1.4rem);
+  letter-spacing: -0.02em;
 }
 
 .actions {
   margin-left: auto;
   display: flex;
-  gap: 0.45rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .btn {
-  border: 1px solid rgba(25, 56, 94, 0.2);
+  border: 1px solid rgba(25, 65, 104, 0.2);
   border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
+  padding: 0.46rem 0.94rem;
+  font-size: 0.81rem;
   font-weight: 700;
-  color: #18305c;
-  background: #f7fbff;
+  color: #194168;
+  background: rgba(248, 252, 255, 0.78);
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
+.btn:not(:disabled):hover {
+  transform: translateY(-1px);
 }
 
 .btn:disabled {
@@ -203,28 +214,29 @@ h2 {
 }
 
 .placeholder {
-  border: 1px dashed rgba(31, 57, 93, 0.26);
-  border-radius: 12px;
-  background: #fffdf9;
-  padding: 0.9rem;
+  border: 1px dashed rgba(17, 53, 86, 0.28);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.95rem;
 }
 
 .placeholder h3 {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.4rem;
+  font-family: "Sora", "Manrope", sans-serif;
 }
 
 .placeholder p {
   margin: 0;
-  color: #3b4660;
+  color: rgba(17, 31, 56, 0.76);
 }
 
 .markdown-body {
-  border: 1px solid rgba(38, 52, 84, 0.14);
-  background: #fffdfa;
-  border-radius: 12px;
-  padding: 1rem;
-  line-height: 1.62;
-  color: #13233f;
+  border: 1px solid rgba(17, 53, 86, 0.14);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 0.9rem;
+  padding: 1rem 1.02rem;
+  line-height: 1.65;
+  color: #111f38;
 }
 
 .markdown-body :deep(h1),
@@ -237,15 +249,15 @@ h2 {
 }
 
 .markdown-body :deep(h1) {
-  font-size: 1.62rem;
+  font-size: 1.66rem;
 }
 
 .markdown-body :deep(h2) {
-  font-size: 1.34rem;
+  font-size: 1.36rem;
 }
 
 .markdown-body :deep(h3) {
-  font-size: 1.13rem;
+  font-size: 1.14rem;
 }
 
 .markdown-body :deep(p),
@@ -262,7 +274,7 @@ h2 {
 }
 
 .markdown-body :deep(code) {
-  background: #edf4ff;
+  background: #ebf4fa;
   border-radius: 5px;
   padding: 0.1rem 0.32rem;
   font-size: 0.88em;
@@ -273,19 +285,19 @@ h2 {
   padding: 0.72rem;
   border-radius: 10px;
   overflow-x: auto;
-  background: #10243b;
-  color: #e6f1ff;
+  background: #15253f;
+  color: #e7f5ff;
 }
 
 .markdown-body :deep(blockquote) {
   margin-left: 0;
   padding: 0.25rem 0.85rem;
-  border-left: 4px solid #0e7490;
-  background: #f3fcff;
+  border-left: 4px solid #0f8f7c;
+  background: rgba(238, 250, 248, 0.86);
 }
 
 .markdown-body :deep(a) {
-  color: #065f93;
+  color: #0f5f96;
 }
 
 .markdown-body :deep(table) {
@@ -297,7 +309,7 @@ h2 {
 
 .markdown-body :deep(th),
 .markdown-body :deep(td) {
-  border: 1px solid rgba(25, 56, 94, 0.18);
+  border: 1px solid rgba(25, 65, 104, 0.18);
   padding: 0.42rem 0.5rem;
   text-align: left;
 }
@@ -305,5 +317,11 @@ h2 {
 .markdown-body :deep(sup) {
   vertical-align: super;
   font-size: 0.75em;
+}
+
+@media (max-width: 850px) {
+  .card {
+    padding: 0.95rem;
+  }
 }
 </style>
