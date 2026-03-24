@@ -8,7 +8,7 @@
           <h1>Research Console</h1>
           <p class="subtitle">
             Submit a topic, follow the six-step backend pipeline in real time,
-            and render the final literature review markdown.
+            and render the final review.
           </p>
         </div>
       </header>

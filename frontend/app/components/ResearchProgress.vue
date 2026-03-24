@@ -73,8 +73,8 @@ const steps = [
   { index: 1, label: "Generating search queries" },
   { index: 2, label: "Searching and deduplicating papers" },
   { index: 3, label: "Downloading and extracting PDFs" },
-  { index: 4, label: "Creating sparse embeddings" },
-  { index: 5, label: "Storing vectors in Qdrant" },
+  { index: 4, label: "Preparing searchable representations" },
+  { index: 5, label: "Updating search index" },
   { index: 6, label: "Running retrieval and generating review" },
 ];
 

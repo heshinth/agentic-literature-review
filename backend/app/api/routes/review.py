@@ -162,10 +162,12 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
                 if text and text not in network_errors:
                     network_errors.append(text)
 
-        # Step 4 — sparse embeddings
+        # Step 4 — prepare search representations
         run_embedding = os.getenv("RUN_EMBEDDING_STEP", "1") == "1"
         if run_embedding:
-            await queue.put(_sse("status", "Creating sparse embeddings...", step=4))
+            await queue.put(
+                _sse("status", "Preparing searchable representations...", step=4)
+            )
             embedding_records, embedding_summary = await loop.run_in_executor(
                 None, prepare_sparse_embeddings, logger
             )
@@ -182,10 +184,12 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
                 preview_count,
             )
 
-            # Step 5 — upsert to Qdrant
+            # Step 5 — update search index
             run_qdrant = os.getenv("RUN_QDRANT_STEP", "1") == "1"
             if run_qdrant:
-                await queue.put(_sse("status", "Storing vectors in Qdrant...", step=5))
+                await queue.put(
+                    _sse("status", "Updating search index...", step=5)
+                )
                 collection = os.getenv("QDRANT_COLLECTION", "papers_sparse")
                 batch_size = int(os.getenv("QDRANT_BATCH_SIZE", "64"))
                 qdrant_summary = await loop.run_in_executor(
