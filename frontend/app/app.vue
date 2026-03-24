@@ -47,7 +47,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { useResearch } from "~/composables/useResearch";
 
 const config = useRuntimeConfig();
@@ -95,7 +102,9 @@ const statusMessage = computed(() => {
 });
 
 const isStatusWarning = computed(() => {
-  return Boolean(errorMessage.value || warningMessage.value || isCancelled.value);
+  return Boolean(
+    errorMessage.value || warningMessage.value || isCancelled.value,
+  );
 });
 
 const checkBackendHealth = async () => {

@@ -70,6 +70,8 @@ async def download_and_extract_one(
         pdf_bytes = None
         successful_source = ""
         successful_url = ""
+        attempt_errors: list[dict[str, str | int | bool]] = []
+        network_errors: list[str] = []
         for candidate in candidate_urls:
             candidate_url = candidate["url"]
             source = candidate["source"]
@@ -79,12 +81,30 @@ async def download_and_extract_one(
                 source,
                 candidate_url,
             )
-            pdf_bytes = await download_pdf_from_url(
+            download_outcome = await download_pdf_from_url(
                 session=session,
                 pdf_url=candidate_url,
                 filename=f"{paper_id}.pdf",
                 save_to_file=False,
             )
+            pdf_bytes = download_outcome.pdf_bytes
+
+            if download_outcome.error:
+                attempt_error: dict[str, str | int | bool] = {
+                    "source": source,
+                    "url": candidate_url,
+                    "error": download_outcome.error,
+                    "is_network_error": download_outcome.is_network_error,
+                }
+                if download_outcome.error_code is not None:
+                    attempt_error["error_code"] = download_outcome.error_code
+                attempt_errors.append(attempt_error)
+
+                if download_outcome.is_network_error:
+                    network_errors.append(
+                        f"{paper_id} via {source}: {download_outcome.error}"
+                    )
+
             if pdf_bytes:
                 successful_source = source
                 successful_url = candidate_url
@@ -101,6 +121,8 @@ async def download_and_extract_one(
                 "title": title,
                 "status": "download_failed",
                 "text": "",
+                "attempt_errors": attempt_errors,
+                "network_errors": network_errors,
             }
 
         extracted_text = await asyncio.to_thread(

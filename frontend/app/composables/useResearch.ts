@@ -9,6 +9,15 @@ interface StatusEvent {
   timestamp: string;
 }
 
+interface ResultPayload {
+  markdown?: string;
+  success?: boolean;
+  warnings?: string[];
+  network_errors?: string[];
+  failed_paper_ids?: string[];
+  pipeline_error?: string;
+}
+
 export function useResearch() {
   const config = useRuntimeConfig();
 
@@ -23,6 +32,9 @@ export function useResearch() {
   const markdown = ref("");
   const errorMessage = ref("");
   const warningMessage = ref("");
+  const warnings = ref<string[]>([]);
+  const networkErrors = ref<string[]>([]);
+  const failedPaperIds = ref<string[]>([]);
   const malformedEventCount = ref(0);
   const statusHistory = ref<StatusEvent[]>([]);
 
@@ -90,15 +102,64 @@ export function useResearch() {
 
       latestMessage.value = message || "Done";
 
-      const resultData = event.data;
+      const resultData = (event.data as ResultPayload | undefined) ?? undefined;
       if (resultData && typeof resultData.markdown === "string") {
         markdown.value = resultData.markdown;
+      }
+
+      const incomingWarnings = Array.isArray(resultData?.warnings)
+        ? resultData?.warnings.filter((item): item is string => typeof item === "string")
+        : [];
+      const incomingNetworkErrors = Array.isArray(resultData?.network_errors)
+        ? resultData?.network_errors.filter((item): item is string => typeof item === "string")
+        : [];
+      const incomingFailedIds = Array.isArray(resultData?.failed_paper_ids)
+        ? resultData?.failed_paper_ids.filter((item): item is string => typeof item === "string")
+        : [];
+
+      warnings.value = incomingWarnings;
+      networkErrors.value = incomingNetworkErrors;
+      failedPaperIds.value = incomingFailedIds;
+
+      if (incomingWarnings.length || incomingNetworkErrors.length) {
+        const parts: string[] = [];
+        if (incomingWarnings.length) {
+          parts.push(`${incomingWarnings.length} warning(s)`);
+        }
+        if (incomingNetworkErrors.length) {
+          parts.push(`${incomingNetworkErrors.length} network error(s)`);
+        }
+        warningMessage.value = `Run completed with ${parts.join(" and ")}.`;
+      }
+
+      if (resultData?.success === false && !errorMessage.value) {
+        errorMessage.value =
+          resultData.pipeline_error ||
+          "Run completed with errors. Check warnings for details.";
       }
       return;
     }
 
     if (event.event === "error") {
       errorMessage.value = message || "The backend returned an error event.";
+
+      const errorData = (event.data as ResultPayload | undefined) ?? undefined;
+      const incomingWarnings = Array.isArray(errorData?.warnings)
+        ? errorData.warnings.filter((item): item is string => typeof item === "string")
+        : [];
+      const incomingNetworkErrors = Array.isArray(errorData?.network_errors)
+        ? errorData.network_errors.filter((item): item is string => typeof item === "string")
+        : [];
+
+      if (incomingWarnings.length) {
+        warnings.value = incomingWarnings;
+      }
+      if (incomingNetworkErrors.length) {
+        networkErrors.value = incomingNetworkErrors;
+      }
+      if (!warningMessage.value && incomingWarnings.length) {
+        warningMessage.value = `Received ${incomingWarnings.length} warning(s) from backend.`;
+      }
     }
   };
 
@@ -109,6 +170,9 @@ export function useResearch() {
     markdown.value = "";
     errorMessage.value = "";
     warningMessage.value = "";
+    warnings.value = [];
+    networkErrors.value = [];
+    failedPaperIds.value = [];
     malformedEventCount.value = 0;
     statusHistory.value = [];
     isCancelled.value = false;
@@ -241,6 +305,9 @@ export function useResearch() {
     markdown,
     errorMessage,
     warningMessage,
+    warnings,
+    networkErrors,
+    failedPaperIds,
     malformedEventCount,
     statusHistory,
     validationError,

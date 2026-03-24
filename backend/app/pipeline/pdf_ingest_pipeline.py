@@ -11,7 +11,7 @@ from app.pipeline.ingest.summaries import init_ingest_summary
 from app.pipeline.ingest.worker import download_and_extract_one
 
 
-async def process_papers(papers: list[dict[str, Any]], logger) -> dict[str, int]:
+async def process_papers(papers: list[dict[str, Any]], logger) -> dict[str, Any]:
     if not papers:
         logger.warning("No papers found.")
         return init_ingest_summary()
@@ -113,6 +113,15 @@ async def process_papers(papers: list[dict[str, Any]], logger) -> dict[str, int]
             if status == "download_failed":
                 logger.warning(f"Skipped {paper_id} | {title}: download failed")
                 summary["download_failed"] += 1
+                summary["failed_paper_ids"].append(paper_id)
+
+                attempt_errors = item.get("attempt_errors") or []
+                if attempt_errors:
+                    summary["download_attempt_errors"][paper_id] = attempt_errors
+
+                network_errors = item.get("network_errors") or []
+                if network_errors:
+                    summary["network_errors"].extend(network_errors)
                 continue
 
             update_paper_status(db, paper_id, {"is_downloaded": True})

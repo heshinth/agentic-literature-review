@@ -1,4 +1,7 @@
-def init_ingest_summary() -> dict[str, int]:
+from typing import Any
+
+
+def init_ingest_summary() -> dict[str, Any]:
     return {
         "added_new": 0,
         "already_in_db": 0,
@@ -10,4 +13,7 @@ def init_ingest_summary() -> dict[str, int]:
         "download_failed": 0,
         "extract_empty": 0,
         "stored_text": 0,
+        "failed_paper_ids": [],
+        "network_errors": [],
+        "download_attempt_errors": {},
     }

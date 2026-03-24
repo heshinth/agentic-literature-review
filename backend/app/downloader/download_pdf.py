@@ -1,5 +1,6 @@
 import os
 import time
+from dataclasses import dataclass
 from curl_cffi import AsyncSession, CurlError
 from rich.progress import (
     Progress,
@@ -11,15 +12,27 @@ from rich.progress import (
 )
 
 
+@dataclass
+class DownloadOutcome:
+    pdf_bytes: bytes | None
+    error: str | None = None
+    is_network_error: bool = False
+    error_code: int | None = None
+
+
 async def download_pdf_from_url(
     session: AsyncSession,
     pdf_url: str,
     filename: str = "sample.pdf",
     output_dir: str = "temp_pdfs",
     save_to_file: bool = True,
-) -> bytes | None:
+) -> DownloadOutcome:
     if not pdf_url:
-        return None
+        return DownloadOutcome(
+            pdf_bytes=None,
+            error="Missing PDF URL",
+            is_network_error=False,
+        )
 
     save_path = os.path.join(output_dir, filename)
     try:
@@ -88,19 +101,52 @@ async def download_pdf_from_url(
             if aborted:
                 if save_to_file and os.path.exists(save_path):
                     os.remove(save_path)
-                return None
+                return DownloadOutcome(
+                    pdf_bytes=None,
+                    error=f"Download aborted due to slow transfer for {filename}",
+                    is_network_error=True,
+                )
 
         pdf_bytes = b"".join(chunks)
         if not pdf_bytes:
-            return None
+            return DownloadOutcome(
+                pdf_bytes=None,
+                error=f"Empty response body for {filename}",
+                is_network_error=False,
+            )
 
         if save_to_file:
             print(f"Saved to {save_path}")
 
-        return pdf_bytes
+        return DownloadOutcome(pdf_bytes=pdf_bytes)
     except CurlError as ce:
         print(f"Curl error for file {filename} ({ce.code}): {ce}")
-        return None
+        error_text = f"Curl error {ce.code}: {ce}"
+        return DownloadOutcome(
+            pdf_bytes=None,
+            error=error_text,
+            is_network_error=True,
+            error_code=ce.code,
+        )
     except Exception as e:
         print(f"Failed to download {pdf_url}: {e}")
-        return None
+        error_text = str(e)
+        lowered = error_text.lower()
+        looks_network_related = any(
+            token in lowered
+            for token in (
+                "timeout",
+                "connection",
+                "network",
+                "tls",
+                "ssl",
+                "dns",
+                "refused",
+                "unreachable",
+            )
+        )
+        return DownloadOutcome(
+            pdf_bytes=None,
+            error=error_text,
+            is_network_error=looks_network_related,
+        )
