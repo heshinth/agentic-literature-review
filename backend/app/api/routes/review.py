@@ -19,6 +19,20 @@ logger = get_logger(__name__)
 TOTAL_STEPS = 6
 
 
+def _to_user_friendly_error(message: str) -> str:
+    lowered = message.lower()
+    if "json_validate_failed" in lowered or "failed to generate json" in lowered:
+        return (
+            "The AI provider returned an invalid structured response. "
+            "The request can usually succeed on retry."
+        )
+    if "api key" in lowered and ("missing" in lowered or "invalid" in lowered):
+        return "The AI provider API key is missing or invalid."
+    if len(message) > 320:
+        return message[:317] + "..."
+    return message
+
+
 def _is_network_error_message(message: str) -> bool:
     lowered = message.lower()
     return any(
@@ -187,9 +201,7 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
             # Step 5 — update search index
             run_qdrant = os.getenv("RUN_QDRANT_STEP", "1") == "1"
             if run_qdrant:
-                await queue.put(
-                    _sse("status", "Updating search index...", step=5)
-                )
+                await queue.put(_sse("status", "Updating search index...", step=5))
                 collection = os.getenv("QDRANT_COLLECTION", "papers_sparse")
                 batch_size = int(os.getenv("QDRANT_BATCH_SIZE", "64"))
                 qdrant_summary = await loop.run_in_executor(
@@ -210,8 +222,9 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
         success = True
 
     except Exception as exc:
-        pipeline_error = str(exc)
-        if _is_network_error_message(pipeline_error):
+        raw_pipeline_error = str(exc)
+        pipeline_error = _to_user_friendly_error(raw_pipeline_error)
+        if _is_network_error_message(raw_pipeline_error):
             network_errors.append(f"pipeline: {pipeline_error}")
         else:
             warnings.append(f"Pipeline exception: {pipeline_error}")
@@ -219,7 +232,7 @@ async def _orchestrate(topic: str, queue: asyncio.Queue) -> None:
         await queue.put(
             _sse(
                 "error",
-                f"Pipeline failed: {exc}",
+                f"Pipeline failed: {pipeline_error}",
                 data={
                     "warnings": warnings,
                     "network_errors": network_errors,

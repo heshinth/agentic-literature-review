@@ -17,6 +17,37 @@ _MAX_CONTEXT_CHUNKS = 25  # chunks passed to any LLM call
 _MAX_EXCERPT_CHARS = 800  # characters per chunk excerpt in the prompt
 
 
+def _create_completion_with_json_fallback(model: str, prompt: str) -> str:
+    """Request JSON output first, then retry without strict JSON if provider rejects it."""
+    try:
+        response = groq_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return response.choices[0].message.content
+    except Exception as exc:
+        message = str(exc)
+        json_mode_failed = any(
+            token in message
+            for token in (
+                "json_validate_failed",
+                "Failed to generate JSON",
+                "response_format",
+                "invalid_request_error",
+            )
+        )
+        if not json_mode_failed:
+            raise
+
+        # Retry without response_format so markdown/plain text generations still succeed.
+        retry = groq_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return retry.choices[0].message.content
+
+
 def _clean_reference_field(value: object, fallback: str = "") -> str:
     text = str(value or fallback).strip()
     return re.sub(r"\s+", " ", text)
@@ -175,12 +206,7 @@ def check_needs_more(
     context_str, _ = _build_context_str(chunks, papers_meta)
     prompt = needs_more_context_prompt(user_query, context_str, round_num)
 
-    response = groq_client.chat.completions.create(
-        model=_CHECK_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-    )
-    content = response.choices[0].message.content
+    content = _create_completion_with_json_fallback(_CHECK_MODEL, prompt)
 
     try:
         result = json.loads(content)
@@ -211,12 +237,7 @@ def generate_summary(
     context_str, citation_list = _build_context_str(chunks, papers_meta)
     prompt = retrieval_summary_prompt(user_query, context_str)
 
-    response = groq_client.chat.completions.create(
-        model=_SUMMARY_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-    )
-    content = response.choices[0].message.content
+    content = _create_completion_with_json_fallback(_SUMMARY_MODEL, prompt)
 
     try:
         result = json.loads(content)
