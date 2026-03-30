@@ -78,7 +78,7 @@ def _build_references_section(
         authors = _clean_reference_field(item.get("authors"), "Unknown Authors")
         year = _clean_reference_field(item.get("year"), "Unknown Year")
         url = _clean_reference_field(item.get("url"), "N/A")
-        lines.append(f"[^%s]: %s. %s. %s. %s" % (n, title, authors, year, url))
+        lines.append("[^%s]: %s. %s. %s. %s" % (n, title, authors, year, url))
 
     if not lines:
         return "## References\n_No citations were used in the generated summary._"
