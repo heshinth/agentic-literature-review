@@ -1,3 +1,107 @@
-## Abstract
+# Agentic Literature Review
 
-The rapid growth of scientific publications in computational intelligence has made manual literature review less efficient, incomplete, and harder to reproduce, especially for new topics like large language models (LLMs). This research presents an autonomous research agent that handles literature discovery, retrieval, and synthesis using computational intelligence techniques. When given a high-level natural language research question, the system automatically creates several diverse search queries and retrieves candidate papers from scholarly knowledge graphs. About thirty abstracts are collected and ranked by their relevance to find the most relevant studies. Selected papers are then obtained through a reliable PDF acquisition process that manages partial open access and temporary download failures. The successfully retrieved documents undergo text extraction, segmentation, and indexing into a hybrid vector database that combines dense embeddings with sparse keyword representations to support effective semantic and lexical searches. A retrieval-augmented generation framework uses this indexed collection to create a structured, citation-supported markdown summary, with references appearing as footnotes linked to the source documents. The agent has an orchestration layer that refines search queries dynamically when the retrieved context is not enough, allowing knowledge gathering to continue without more input from the user. Experimental testing on recent LLM-related research questions shows that this approach improves the coverage and relevance of retrieved literature while significantly cutting down the effort needed from humans in the early stages of preparing a survey. Additionally, a comparative analysis of combined findings helps identify new trends and research gaps that have not been fully explored. This system shows how agent-based AI and hybrid retrieval methods can boost research productivity and reproducibility, supporting human-centered, intelligent knowledge discovery. This work offers a scalable framework for automated literature reviews and sets the stage for future research on autonomous scientific assistants.
+Full-stack app for automated literature review generation.
+Enter a topic, and the system searches papers, processes PDFs, retrieves relevant chunks, and produces a markdown summary.
+
+## What It Does
+
+1. Generate search queries from a topic.
+2. Fetch and rank papers.
+3. Download and extract PDF text.
+4. Build sparse embeddings and store in Qdrant.
+5. Run agentic retrieval.
+6. Return a citation-style markdown report.
+
+## Stack
+
+- Frontend: Nuxt 4
+- Backend: FastAPI
+- Database: PostgreSQL
+- Vector DB: Qdrant
+- LLM: Groq API
+- Paper source: Semantic Scholar API
+
+## Quick Start (Docker)
+
+1. Create `.env` in the repo root:
+
+```bash
+cp backend/.env.sample .env
+```
+
+2. Set required keys in `.env`:
+
+```env
+S2_API_KEY=your_semantic_scholar_key
+GROQ_API_KEY=your_groq_key
+```
+
+3. Start everything:
+
+```bash
+docker compose up --build
+```
+
+4. Open:
+
+- Frontend: http://localhost:3000
+- Backend docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- Postgres UI (pgweb): http://localhost:8081
+
+## Local Development (Optional)
+
+Run only data services:
+
+```bash
+docker compose up -d postgres qdrant
+```
+
+Backend:
+
+```bash
+cd backend
+cp .env.sample .env
+uv sync
+uv run uvicorn app.server:app --reload --host 0.0.0.0 --port 8000
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+NUXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
+## API
+
+Base URL: `http://localhost:8000`
+
+- `GET /health`
+- `POST /research` (SSE stream)
+
+```bash
+curl -N -X POST http://localhost:8000/research \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"latest developments in large language models"}'
+```
+
+## Key Environment Variables
+
+- Required: `S2_API_KEY`, `GROQ_API_KEY`
+- Database: `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`
+- Vector store: `QDRANT_URL`, `QDRANT_COLLECTION`, `QDRANT_BATCH_SIZE`
+- Pipeline toggles: `RUN_EMBEDDING_STEP`, `RUN_QDRANT_STEP`
+
+Full list: `backend/.env.sample`
+
+## Outputs
+
+- Summaries: `backend/outputs/`
+- Logs/artifacts: `backend/logs/`
+- Downloaded PDFs: `backend/temp_pdfs/`
+
+## License
+
+MIT (see `LICENSE`).

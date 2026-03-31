@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "fastapi", "run", "./app/server.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8000"]
