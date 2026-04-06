@@ -199,7 +199,8 @@ onBeforeUnmount(() => {
   --accent-teal: #0f8f7c;
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   padding: 2.5rem 1.1rem 2.8rem;
   background:
     radial-gradient(
